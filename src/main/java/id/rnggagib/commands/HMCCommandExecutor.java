@@ -6,6 +6,7 @@ import id.rnggagib.utils.MessageUtils;
 import id.rnggagib.utils.WandUtils;
 import id.rnggagib.utils.CropPriceUtils;
 import id.rnggagib.gui.ShopGUI;
+import id.rnggagib.models.PlayerSkill;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -67,6 +68,8 @@ public class HMCCommandExecutor implements CommandExecutor {
             case "shop":
                 return handleShopCommand(player);
             case "help":
+            case "stats":
+                return handleStatsCommand(player);
             default:
                 sendHelpMessage(player);
                 return true;
@@ -314,6 +317,51 @@ public class HMCCommandExecutor implements CommandExecutor {
         return true;
     }
 
+    private boolean handleStatsCommand(Player player) {
+        if (!player.hasPermission("harvestmoonmc.stats")) {
+            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                    plugin.getConfig().getString("messages.no_permission")));
+            return true;
+        }
+        
+        PlayerSkill skill = plugin.getSkillManager().getSkill(player);
+        int level = skill.getLevel();
+        int currentXp = skill.getXp();
+        int nextLevelXp = skill.getXpForNextLevel();
+        double progress = skill.getProgressToNextLevel();
+        double qualityBonus = plugin.getSkillManager().getQualityMultiplier(player);
+        
+        player.sendMessage(MessageUtils.colorize("&6==== Your Farming Skills ===="));
+        player.sendMessage(MessageUtils.colorize("&7Level: &a" + level + (level >= PlayerSkill.getMaxLevel() ? " &7(MAX)" : "")));
+        
+        if (level < PlayerSkill.getMaxLevel()) {
+            player.sendMessage(MessageUtils.colorize("&7XP: &b" + currentXp + "&7/&b" + nextLevelXp + 
+                    " &7(" + String.format("%.1f", progress * 100) + "%)"));
+                    
+            // Create XP bar visualization
+            int barLength = 20;
+            int filledBars = (int) Math.round(progress * barLength);
+            StringBuilder bar = new StringBuilder("&7[");
+            
+            for (int i = 0; i < barLength; i++) {
+                if (i < filledBars) {
+                    bar.append("&a▮");
+                } else {
+                    bar.append("&8▮");
+                }
+            }
+            
+            bar.append("&7]");
+            player.sendMessage(MessageUtils.colorize(bar.toString()));
+        }
+        
+        // Show bonuses
+        player.sendMessage(MessageUtils.colorize("&7Quality Bonus: &6+" + 
+                String.format("%.0f", (qualityBonus - 1) * 100) + "% &7chance for better crops"));
+        
+        return true;
+    }
+
     private void sendHelpMessage(Player player) {
         player.sendMessage(MessageUtils.colorize("&6==== HarvestMoonMC Help ===="));
         player.sendMessage(MessageUtils.colorize("&e/hmc wand &7- Get a region selection wand"));
@@ -324,5 +372,6 @@ public class HMCCommandExecutor implements CommandExecutor {
         player.sendMessage(MessageUtils.colorize("&e/hmc sell <hand|all> &7- Sell crops for money"));
         player.sendMessage(MessageUtils.colorize("&e/hmc shop &7- Open the shop GUI"));
         player.sendMessage(MessageUtils.colorize("&e/hmc help &7- Show this help message"));
+        player.sendMessage(MessageUtils.colorize("&e/hmc stats &7- View your farming skills and level"));
     }
 }

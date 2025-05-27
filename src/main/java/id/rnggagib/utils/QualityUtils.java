@@ -6,12 +6,13 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.entity.Player;
 
 import java.util.*;
 
 public class QualityUtils {
     
-    public static Map<String, Object> calculateQuality(HarvestMoonMC plugin, Material cropType, ItemStack tool) {
+    public static Map<String, Object> calculateQuality(HarvestMoonMC plugin, Material cropType, ItemStack tool, Player player) {
         Map<String, Object> result = new HashMap<>();
         Random random = new Random();
         
@@ -33,17 +34,40 @@ public class QualityUtils {
         
         // Get weighted tiers based on tool modifier
         List<String> weightedTiers = new ArrayList<>();
-        for (String tier : tiers) {
-            int weight = qualityTiersSection.getInt(tier + ".weight");
+        // Apply player skill multiplier to weight chance if player is provided
+        if (player != null) {
+            double skillMultiplier = plugin.getSkillManager().getQualityMultiplier(player);
             
-            // Apply tool modifier to weight chance (better tools = better chance for rare items)
-            if (!tier.equals("COMMON")) {
-                weight = (int) (weight * toolModifier);
+            for (String tier : tiers) {
+                int weight = qualityTiersSection.getInt(tier + ".weight");
+                
+                // Apply tool modifier to weight chance (better tools = better chance for rare items)
+                if (!tier.equals("COMMON")) {
+                    weight = (int) (weight * toolModifier);
+                    
+                    // Apply skill modifier to non-common tiers
+                    weight = (int) (weight * skillMultiplier);
+                }
+                
+                // Add the tier to the list multiple times based on its weight
+                for (int i = 0; i < weight; i++) {
+                    weightedTiers.add(tier);
+                }
             }
-            
-            // Add the tier to the list multiple times based on its weight
-            for (int i = 0; i < weight; i++) {
-                weightedTiers.add(tier);
+        } else {
+            // Existing code for when player is null
+            for (String tier : tiers) {
+                int weight = qualityTiersSection.getInt(tier + ".weight");
+                
+                // Apply tool modifier to weight chance (better tools = better chance for rare items)
+                if (!tier.equals("COMMON")) {
+                    weight = (int) (weight * toolModifier);
+                }
+                
+                // Add the tier to the list multiple times based on its weight
+                for (int i = 0; i < weight; i++) {
+                    weightedTiers.add(tier);
+                }
             }
         }
         

@@ -4,7 +4,7 @@ main: id.rnggagib.HarvestMoonMC
 api-version: 1.20
 authors: [rnggagib]
 description: Harvest Moon-inspired farming plugin for Minecraft
-softdepend: [Vault]
+softdepend: [Vault, WorldGuard]
 
 commands:
   hmc:
@@ -33,4 +33,7 @@ permissions:
     default: true
   harvestmoonmc.shop:
     description: Allows access to the shop
+    default: true
+  harvestmoonmc.stats:
+    description: Allows checking farming skills
     default: true

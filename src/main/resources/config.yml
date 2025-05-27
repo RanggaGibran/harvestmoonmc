@@ -81,8 +81,35 @@ messages:
   region_exists: "Region dengan nama '%name%' sudah ada!"
   no_selection: "Pilih 2 posisi dengan wand terlebih dahulu!"
   no_permission: "Anda tidak memiliki izin untuk melakukan ini."
+  xp_gained: "&a+%amount% Farming XP"
+  level_up: "&aLevel up! Farming Skill naik ke level &6%level%&a!"
+  wheat_only: "&cAnda hanya dapat memanen tanaman gandum di region pertanian."
 
 # Farming Settings
 farming:
   animation_delay_ticks: 10  # Delay between growth stages (in ticks, 20 ticks = 1 second)
   enable_animations: true    # Set to false to disable growth animations
+
+# Skills System
+skills:
+  # Base XP values for crops
+  base_xp:
+    WHEAT: 2
+    CARROT: 3
+    POTATO: 3
+    BEETROOT: 4
+    
+  # Quality XP multipliers
+  quality_xp_multiplier:
+    COMMON: 1.0
+    UNCOMMON: 1.5
+    RARE: 2.0
+    EPIC: 3.0
+    
+  # Player level impact
+  quality_multiplier_per_level: 0.02  # 2% quality chance increase per level
+  max_quality_multiplier: 2.0         # Maximum 100% bonus (2x base chance)
+
+  # XP notification type: chat, actionbar, sound, none
+  xp_notification: "actionbar"   # actionbar is less intrusive than chat
+  total_xp_notification: false   # set to true to show accumulated XP instead of per-crop
