@@ -6,6 +6,7 @@ public class PlayerSkill {
     private final UUID playerId;
     private int xp;
     private int level;
+    private int totalHarvests;
     
     // XP needed for each level
     private static final int[] XP_REQUIREMENTS = {
@@ -47,6 +48,7 @@ public class PlayerSkill {
         this.playerId = playerId;
         this.xp = 0;
         this.level = 1;
+        this.totalHarvests = 0;
     }
     
     /**
@@ -126,5 +128,28 @@ public class PlayerSkill {
     
     public static int getMaxLevel() {
         return MAX_LEVEL;
+    }
+    
+    /**
+     * Gets the total number of harvests by this player
+     * @return Total harvests count
+     */
+    public int getTotalHarvests() {
+        return totalHarvests;
+    }
+
+    /**
+     * Increments the total harvest count by 1
+     */
+    public void incrementHarvests() {
+        totalHarvests++;
+    }
+
+    /**
+     * Increments the total harvest count by specified amount
+     * @param amount Amount to add
+     */
+    public void addHarvests(int amount) {
+        totalHarvests += amount;
     }
 }

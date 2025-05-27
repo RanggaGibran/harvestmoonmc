@@ -99,6 +99,10 @@ public class SkillManager {
                     skill.setXp(xp);
                     skill.setLevel(level);
                     
+                    // Tambahkan pemuatan total panen
+                    int totalHarvests = playersSection.getInt(uuidKey + ".harvests", 0);
+                    skill.addHarvests(totalHarvests);
+                    
                     playerSkills.put(uuid, skill);
                 } catch (Exception e) {
                     plugin.getLogger().log(Level.WARNING, "Error loading skills for player: " + uuidKey, e);
@@ -128,11 +132,14 @@ public class SkillManager {
                 skillsConfig.set(path + ".xp", skill.getXp());
                 skillsConfig.set(path + ".level", skill.getLevel());
                 
-                // If player is online, save their name for reference
+                // Jika pemain online, simpan namanya sebagai referensi
                 Player player = Bukkit.getPlayer(uuid);
                 if (player != null) {
                     skillsConfig.set(path + ".name", player.getName());
                 }
+                
+                // Simpan total panen
+                skillsConfig.set(path + ".harvests", skill.getTotalHarvests());
             }
             
             // Save the config file
@@ -218,6 +225,20 @@ public class SkillManager {
         
         // Calculate final XP
         return (int) Math.round(baseXp * qualityMultiplier);
+    }
+    
+    /**
+     * Gets the XP required for the next level
+     * @param level Current level
+     * @return XP required for next level, or -1 if at max level
+     */
+    public int getXpForNextLevel(int level) {
+        if (level >= PlayerSkill.getMaxLevel()) return -1;
+        
+        // Get the player skill empty instance just to access the XP requirements
+        PlayerSkill dummySkill = new PlayerSkill(UUID.randomUUID());
+        dummySkill.setLevel(level);
+        return dummySkill.getXpForNextLevel();
     }
     
     /**

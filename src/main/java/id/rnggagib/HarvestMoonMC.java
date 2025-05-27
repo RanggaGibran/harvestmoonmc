@@ -14,6 +14,7 @@ import id.rnggagib.managers.SelectionManager;
 import id.rnggagib.managers.SkillManager;
 import id.rnggagib.managers.WorldGuardManager;
 import id.rnggagib.gui.ShopGUI;
+import id.rnggagib.managers.PlaceholderManager;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -99,6 +100,12 @@ public class HarvestMoonMC extends JavaPlugin {
             getLogger().info("WorldGuard integration initialized");
         } else {
             getLogger().info("WorldGuard not found, integration disabled");
+        }
+        
+        // Register PlaceholderAPI expansion if it's present
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            getLogger().info("PlaceholderAPI found, registering placeholders...");
+            new PlaceholderManager(this).register();
         }
         
         LOGGER.info("harvestmoonmc enabled");

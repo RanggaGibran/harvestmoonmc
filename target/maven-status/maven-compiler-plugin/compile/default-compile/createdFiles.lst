@@ -2,6 +2,7 @@ id\rnggagib\listeners\FarmingListener.class
 id\rnggagib\utils\QualityUtils.class
 id\rnggagib\managers\RegionManager.class
 id\rnggagib\models\PlayerSkill.class
+id\rnggagib\managers\PlaceholderManager.class
 id\rnggagib\HarvestMoonMC.class
 id\rnggagib\listeners\WandListener.class
 id\rnggagib\managers\EconomyManager.class
