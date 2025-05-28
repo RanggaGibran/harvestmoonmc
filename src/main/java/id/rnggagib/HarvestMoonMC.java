@@ -9,6 +9,7 @@ import id.rnggagib.commands.HMCCommandExecutor;
 import id.rnggagib.listeners.FarmingListener;
 import id.rnggagib.listeners.WandListener;
 import id.rnggagib.managers.EconomyManager;
+import id.rnggagib.managers.EventManager;
 import id.rnggagib.managers.RegionManager;
 import id.rnggagib.managers.SelectionManager;
 import id.rnggagib.managers.SkillManager;
@@ -37,6 +38,7 @@ public class HarvestMoonMC extends JavaPlugin {
     private ShopGUI shopGUI;
     private FileConfiguration config;
     private WorldGuardManager worldGuardManager;
+    private EventManager eventManager;
     
     // Deklarasi flag sebagai field statis
     public static StateFlag ALLOW_WHEAT_FARMING;
@@ -108,6 +110,10 @@ public class HarvestMoonMC extends JavaPlugin {
             new PlaceholderManager(this).register();
         }
         
+        // Initialize event manager
+        eventManager = new EventManager(this);
+        getLogger().info("Event Manager initialized");
+        
         LOGGER.info("harvestmoonmc enabled");
     }
     
@@ -117,6 +123,11 @@ public class HarvestMoonMC extends JavaPlugin {
         // Save farm regions and properly shut down
         regionManager.shutdown();
         skillManager.shutdown();
+        
+        // Shutdown event manager
+        if (eventManager != null) {
+            eventManager.shutdown();
+        }
         
         LOGGER.info("harvestmoonmc disabled");
     }
@@ -147,5 +158,9 @@ public class HarvestMoonMC extends JavaPlugin {
     
     public WorldGuardManager getWorldGuardManager() {
         return worldGuardManager;
+    }
+    
+    public EventManager getEventManager() {
+        return eventManager;
     }
 }

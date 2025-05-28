@@ -92,6 +92,19 @@ public class ShopGUI implements Listener {
         lore.add(MessageUtils.colorize("&7Your Balance: &6" + 
                 plugin.getEconomyManager().format(plugin.getEconomyManager().getBalance(player))));
         
+        // If there's an active event, add that information to the lore
+        if (plugin.getEventManager().isEventActive()) {
+            int multiplier = plugin.getEventManager().getCurrentPriceMultiplier();
+            int remainingSeconds = plugin.getEventManager().getRemainingTime();
+            int minutes = remainingSeconds / 60;
+            int seconds = remainingSeconds % 60;
+            
+            lore.add("");
+            lore.add(MessageUtils.colorize("&6&l✨ EVENT SPESIAL AKTIF!"));
+            lore.add(MessageUtils.colorize("&e" + multiplier + "x &7multiplier harga penjualan!"));
+            lore.add(MessageUtils.colorize("&7Sisa waktu: &e" + minutes + "m " + seconds + "s"));
+        }
+        
         meta.setLore(lore);
         infoItem.setItemMeta(meta);
         
@@ -168,6 +181,10 @@ public class ShopGUI implements Listener {
         double totalEarnings = 0;
         int totalItems = 0;
         
+        // Get the event multiplier
+        int priceMultiplier = plugin.getEventManager().getCurrentPriceMultiplier();
+        boolean isEventActive = priceMultiplier > 1;
+        
         // Check all items in shop inventory (excluding dividers and buttons)
         for (int i = 9; i < 45; i++) {
             ItemStack item = inventory.getItem(i);
@@ -176,12 +193,14 @@ public class ShopGUI implements Listener {
                 continue;
             }
             
-            double price = CropPriceUtils.getItemPrice(item);
+            double basePrice = CropPriceUtils.getItemPrice(item);
             
-            if (price <= 0) {
+            if (basePrice <= 0) {
                 continue;
             }
             
+            // Apply the event multiplier
+            double price = basePrice * priceMultiplier;
             double itemTotal = price * item.getAmount();
             totalEarnings += itemTotal;
             totalItems += item.getAmount();
@@ -192,19 +211,26 @@ public class ShopGUI implements Listener {
         
         if (totalItems == 0) {
             player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                    "&cNo sellable crops in the shop!"));
+                    "&cTidak ada hasil panen yang bisa dijual di toko!"));
             return;
         }
         
         // Give money to player
         plugin.getEconomyManager().depositMoney(player, totalEarnings);
         
-        // Send confirmation message
-        player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                "&aSold &f" + totalItems + " &aitems for &6" + 
-                plugin.getEconomyManager().format(totalEarnings)));
+        // Send confirmation message with event bonus info if active
+        String message;
+        if (isEventActive) {
+            message = "&aTerjual &f" + totalItems + " &ahasil panen seharga &6" + 
+                    plugin.getEconomyManager().format(totalEarnings) + " &a(&e" + priceMultiplier + "x &amultiplier event!)";
+        } else {
+            message = "&aTerjual &f" + totalItems + " &ahasil panen seharga &6" + 
+                    plugin.getEconomyManager().format(totalEarnings);
+        }
         
-        // Update info item
+        player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + message));
+        
+        // Update info
         updateInfoItem(player, inventory);
     }
     

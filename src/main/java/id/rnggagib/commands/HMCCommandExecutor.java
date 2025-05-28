@@ -14,6 +14,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Random;
+
 public class HMCCommandExecutor implements CommandExecutor {
     private final HarvestMoonMC plugin;
 
@@ -70,6 +72,24 @@ public class HMCCommandExecutor implements CommandExecutor {
             case "help":
             case "stats":
                 return handleStatsCommand(player);
+            case "event":
+                if (args.length >= 2 && player.hasPermission("harvestmoonmc.admin.event")) {
+                    String eventSubCommand = args[1].toLowerCase();
+                    switch (eventSubCommand) {
+                        case "start":
+                            int multiplier = args.length >= 3 ? Integer.parseInt(args[2]) : 0;
+                            int durationMinutes = args.length >= 4 ? Integer.parseInt(args[3]) : 0;
+                            return handleEventStartCommand(player, multiplier, durationMinutes);
+                        case "stop":
+                            return handleEventStopCommand(player);
+                        case "reload":
+                            return handleEventReloadCommand(player);
+                        default:
+                            return handleEventCommand(player);
+                    }
+                } else {
+                    return handleEventCommand(player);
+                }
             default:
                 sendHelpMessage(player);
                 return true;
@@ -231,14 +251,19 @@ public class HMCCommandExecutor implements CommandExecutor {
             return true;
         }
         
-        double price = CropPriceUtils.getItemPrice(item);
+        double basePrice = CropPriceUtils.getItemPrice(item);
         
-        if (price <= 0) {
+        if (basePrice <= 0) {
             player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                    "&cThis item cannot be sold!"));
+                    "&cItem ini tidak dapat dijual!"));
             return true;
         }
         
+        // Apply the event multiplier
+        int priceMultiplier = plugin.getEventManager().getCurrentPriceMultiplier();
+        boolean isEventActive = priceMultiplier > 1;
+        
+        double price = basePrice * priceMultiplier;
         double totalPrice = price * item.getAmount();
         
         // Remove the item
@@ -247,10 +272,18 @@ public class HMCCommandExecutor implements CommandExecutor {
         // Give money to player
         plugin.getEconomyManager().depositMoney(player, totalPrice);
         
-        // Send confirmation message
-        player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                "&aSold &f" + item.getAmount() + "x " + item.getItemMeta().getDisplayName() + 
-                " &afor &6" + plugin.getEconomyManager().format(totalPrice)));
+        // Send confirmation message with event bonus info if active
+        String message;
+        if (isEventActive) {
+            message = "&aTerjual &f" + item.getAmount() + "x " + item.getItemMeta().getDisplayName() + 
+                    " &aseharga &6" + plugin.getEconomyManager().format(totalPrice) + 
+                    " &a(&e" + priceMultiplier + "x &amultiplier event!)";
+        } else {
+            message = "&aTerjual &f" + item.getAmount() + "x " + item.getItemMeta().getDisplayName() + 
+                    " &aseharga &6" + plugin.getEconomyManager().format(totalPrice);
+        }
+        
+        player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + message));
         
         return true;
     }
@@ -258,6 +291,10 @@ public class HMCCommandExecutor implements CommandExecutor {
     private boolean sellAllCrops(Player player) {
         double totalEarnings = 0;
         int totalItems = 0;
+        
+        // Get the event multiplier
+        int priceMultiplier = plugin.getEventManager().getCurrentPriceMultiplier();
+        boolean isEventActive = priceMultiplier > 1;
         
         // Check all items in inventory
         for (int i = 0; i < player.getInventory().getSize(); i++) {
@@ -267,12 +304,14 @@ public class HMCCommandExecutor implements CommandExecutor {
                 continue;
             }
             
-            double price = CropPriceUtils.getItemPrice(item);
+            double basePrice = CropPriceUtils.getItemPrice(item);
             
-            if (price <= 0) {
+            if (basePrice <= 0) {
                 continue;
             }
             
+            // Apply the event multiplier
+            double price = basePrice * priceMultiplier;
             double itemTotal = price * item.getAmount();
             totalEarnings += itemTotal;
             totalItems += item.getAmount();
@@ -283,17 +322,24 @@ public class HMCCommandExecutor implements CommandExecutor {
         
         if (totalItems == 0) {
             player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                    "&cYou don't have any sellable crops in your inventory!"));
+                    "&cAnda tidak memiliki hasil panen yang dapat dijual!"));
             return true;
         }
         
         // Give money to player
         plugin.getEconomyManager().depositMoney(player, totalEarnings);
         
-        // Send confirmation message
-        player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                "&aSold &f" + totalItems + " &aitems for &6" + 
-                plugin.getEconomyManager().format(totalEarnings)));
+        // Send confirmation message with event bonus info if active
+        String message;
+        if (isEventActive) {
+            message = "&aTerjual &f" + totalItems + " &ahasil panen seharga &6" + 
+                    plugin.getEconomyManager().format(totalEarnings) + " &a(&e" + priceMultiplier + "x &amultiplier event!)";
+        } else {
+            message = "&aTerjual &f" + totalItems + " &ahasil panen seharga &6" + 
+                    plugin.getEconomyManager().format(totalEarnings);
+        }
+        
+        player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + message));
         
         return true;
     }
@@ -362,6 +408,116 @@ public class HMCCommandExecutor implements CommandExecutor {
         return true;
     }
 
+    private boolean handleEventCommand(Player player) {
+        if (!player.hasPermission("harvestmoonmc.event")) {
+            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                    plugin.getConfig().getString("messages.no_permission")));
+            return true;
+        }
+        
+        if (plugin.getEventManager().isEventActive()) {
+            int multiplier = plugin.getEventManager().getCurrentPriceMultiplier();
+            int remainingSeconds = plugin.getEventManager().getRemainingTime();
+            int minutes = remainingSeconds / 60;
+            int seconds = remainingSeconds % 60;
+            
+            player.sendMessage(MessageUtils.colorize("&6==== Event Penjualan Spesial ===="));
+            player.sendMessage(MessageUtils.colorize("&7Status: &aAktif"));
+            player.sendMessage(MessageUtils.colorize("&7Multiplier: &e" + multiplier + "x"));
+            player.sendMessage(MessageUtils.colorize("&7Sisa waktu: &e" + minutes + " menit " + seconds + " detik"));
+        } else {
+            player.sendMessage(MessageUtils.colorize("&6==== Event Penjualan Spesial ===="));
+            player.sendMessage(MessageUtils.colorize("&7Status: &cTidak aktif"));
+            player.sendMessage(MessageUtils.colorize("&7Tunggu pengumuman event penjualan spesial berikutnya!"));
+        }
+        
+        return true;
+    }
+
+    /**
+     * Handles the command to manually start an event
+     */
+    private boolean handleEventStartCommand(Player player, int requestedMultiplier, int requestedDurationMinutes) {
+        if (!player.hasPermission("harvestmoonmc.admin.event")) {
+            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                    plugin.getConfig().getString("messages.no_permission")));
+            return true;
+        }
+
+        // Get default config values
+        int defaultMinDuration = plugin.getConfig().getInt("events.min_duration_minutes", 5);
+        int defaultMaxDuration = plugin.getConfig().getInt("events.max_duration_minutes", 15);
+        int[] possibleMultipliers = plugin.getEventManager().getPossibleMultipliers();
+        
+        // Use defaults if values aren't specified or are invalid
+        int multiplier = requestedMultiplier;
+        if (multiplier <= 0) {
+            // Pick a random multiplier from config
+            multiplier = possibleMultipliers[new Random().nextInt(possibleMultipliers.length)];
+        }
+        
+        int durationMinutes = requestedDurationMinutes;
+        if (durationMinutes <= 0) {
+            // Random duration between min and max from config
+            durationMinutes = defaultMinDuration + new Random().nextInt(defaultMaxDuration - defaultMinDuration + 1);
+        }
+        
+        // Start the event
+        boolean started = plugin.getEventManager().startEventManually(multiplier, durationMinutes * 60);
+        
+        if (started) {
+            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                    "&aEvent penjualan spesial berhasil dimulai dengan multiplier " + multiplier + "x selama " + 
+                    durationMinutes + " menit!"));
+        } else {
+            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                    "&cTidak dapat memulai event. Event lain mungkin sedang berjalan."));
+        }
+        
+        return true;
+    }
+
+    /**
+     * Handles the command to manually stop an event
+     */
+    private boolean handleEventStopCommand(Player player) {
+        if (!player.hasPermission("harvestmoonmc.admin.event")) {
+            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                    plugin.getConfig().getString("messages.no_permission")));
+            return true;
+        }
+        
+        boolean stopped = plugin.getEventManager().stopEventManually();
+        
+        if (stopped) {
+            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                    "&aEvent penjualan spesial berhasil dihentikan."));
+        } else {
+            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                    "&cTidak ada event yang sedang berjalan."));
+        }
+        
+        return true;
+    }
+
+    /**
+     * Handles the command to reload event settings
+     */
+    private boolean handleEventReloadCommand(Player player) {
+        if (!player.hasPermission("harvestmoonmc.admin.event")) {
+            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                    plugin.getConfig().getString("messages.no_permission")));
+            return true;
+        }
+        
+        plugin.getEventManager().reloadConfig();
+        
+        player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                "&aKonfigurasi event berhasil di-reload."));
+        
+        return true;
+    }
+
     private void sendHelpMessage(Player player) {
         player.sendMessage(MessageUtils.colorize("&6==== HarvestMoonMC Help ===="));
         player.sendMessage(MessageUtils.colorize("&e/hmc wand &7- Get a region selection wand"));
@@ -373,5 +529,6 @@ public class HMCCommandExecutor implements CommandExecutor {
         player.sendMessage(MessageUtils.colorize("&e/hmc shop &7- Open the shop GUI"));
         player.sendMessage(MessageUtils.colorize("&e/hmc help &7- Show this help message"));
         player.sendMessage(MessageUtils.colorize("&e/hmc stats &7- View your farming skills and level"));
+        player.sendMessage(MessageUtils.colorize("&e/hmc event &7- Cek status event penjualan spesial"));
     }
 }

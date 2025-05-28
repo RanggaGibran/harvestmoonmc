@@ -84,6 +84,8 @@ messages:
   xp_gained: "&a+%amount% Farming XP"
   level_up: "&aLevel up! Farming Skill naik ke level &6%level%&a!"
   wheat_only: "&cAnda hanya dapat memanen tanaman gandum di region pertanian."
+  event_start: "&6&l✨ EVENT SPESIAL! &e&lJual tanaman dengan harga {multiplier}x lipat selama {duration} menit!"
+  event_end: "&6&l✨ Event penjualan spesial telah berakhir!"
 
 # Farming Settings
 farming:
@@ -113,3 +115,14 @@ skills:
   # XP notification type: chat, actionbar, sound, none
   xp_notification: "actionbar"   # actionbar is less intrusive than chat
   total_xp_notification: false   # set to true to show accumulated XP instead of per-crop
+
+# Pengaturan event penjualan spesial
+events:
+  min_interval_minutes: 40
+  max_interval_minutes: 60
+  min_duration_minutes: 5
+  max_duration_minutes: 15
+  possible_multipliers:
+    - 2
+    - 3
+    - 4

@@ -37,3 +37,9 @@ permissions:
   harvestmoonmc.stats:
     description: Allows checking farming skills
     default: true
+  harvestmoonmc.event:
+    description: Allows checking current event status
+    default: true
+  harvestmoonmc.admin.event:
+    description: Allows managing sale events
+    default: op
