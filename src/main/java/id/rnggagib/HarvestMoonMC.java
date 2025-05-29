@@ -15,6 +15,7 @@ import id.rnggagib.managers.SelectionManager;
 import id.rnggagib.managers.SkillManager;
 import id.rnggagib.managers.WorldGuardManager;
 import id.rnggagib.gui.ShopGUI;
+import id.rnggagib.managers.HarvestLimitManager;
 import id.rnggagib.managers.PlaceholderManager;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -39,6 +40,7 @@ public class HarvestMoonMC extends JavaPlugin {
     private FileConfiguration config;
     private WorldGuardManager worldGuardManager;
     private EventManager eventManager;
+    private HarvestLimitManager harvestLimitManager; // Add this field to the class
     
     // Deklarasi flag sebagai field statis
     public static StateFlag ALLOW_WHEAT_FARMING;
@@ -114,6 +116,10 @@ public class HarvestMoonMC extends JavaPlugin {
         eventManager = new EventManager(this);
         getLogger().info("Event Manager initialized");
         
+        // Initialize harvest limit manager
+        harvestLimitManager = new HarvestLimitManager(this);
+        getLogger().info("Harvest Limit Manager initialized");
+        
         LOGGER.info("harvestmoonmc enabled");
     }
     
@@ -127,6 +133,11 @@ public class HarvestMoonMC extends JavaPlugin {
         // Shutdown event manager
         if (eventManager != null) {
             eventManager.shutdown();
+        }
+        
+        // Shutdown harvest limit manager
+        if (harvestLimitManager != null) {
+            harvestLimitManager.shutdown();
         }
         
         LOGGER.info("harvestmoonmc disabled");
@@ -162,5 +173,9 @@ public class HarvestMoonMC extends JavaPlugin {
     
     public EventManager getEventManager() {
         return eventManager;
+    }
+    
+    public HarvestLimitManager getHarvestLimitManager() { // Add getter method
+        return harvestLimitManager;
     }
 }

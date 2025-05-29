@@ -40,16 +40,16 @@ public class WorldGuardManager {
         try {
             Location location = block.getLocation();
             
-            // Check if the block is in our farming region
-            if (plugin.getRegionManager().getRegionAt(location) != null) {
-                // If it's in our farming region AND it's wheat, bypass WorldGuard
-                return true;
+            // If the block is not in any of our farming regions, let WorldGuard decide
+            if (plugin.getRegionManager().getRegionAt(location) == null) {
+                // Just test the standard WorldGuard protection
+                return WorldGuard.getInstance().getPlatform().getRegionContainer()
+                        .createQuery()
+                        .testBuild(BukkitAdapter.adapt(location), WorldGuardPlugin.inst().wrapPlayer(player));
             }
             
-            // Gunakan testBuild langsung untuk pemeriksaan standar
-            return WorldGuard.getInstance().getPlatform().getRegionContainer()
-                    .createQuery()
-                    .testBuild(BukkitAdapter.adapt(location), WorldGuardPlugin.inst().wrapPlayer(player));
+            // If it's in our farming region AND it's wheat, bypass WorldGuard
+            return true;
         } catch (Exception e) {
             plugin.getLogger().warning("Error checking WorldGuard protection: " + e.getMessage());
             return false;

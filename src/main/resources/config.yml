@@ -86,6 +86,9 @@ messages:
   wheat_only: "&cAnda hanya dapat memanen tanaman gandum di region pertanian."
   event_start: "&6&l✨ EVENT SPESIAL! &e&lJual tanaman dengan harga {multiplier}x lipat selama {duration} menit!"
   event_end: "&6&l✨ Event penjualan spesial telah berakhir!"
+  harvest_limit_reset: "&aKuota panen Anda telah direset!"
+  harvest_limit_reached: "&cAnda telah mencapai batas panen hari ini. Silakan tunggu reset."
+  harvest_remaining: "&eSisa kuota panen hari ini: &6{count}"
 
 # Farming Settings
 farming:
@@ -126,3 +129,10 @@ events:
     - 2
     - 3
     - 4
+
+# Harvest settings
+harvest:
+  min_limit: 300
+  max_limit: 500
+  min_reset_time_minutes: 60
+  max_reset_time_minutes: 180

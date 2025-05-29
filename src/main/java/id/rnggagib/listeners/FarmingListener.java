@@ -46,8 +46,15 @@ public class FarmingListener implements Listener {
         // Get the farming region at this location
         FarmingRegion region = plugin.getRegionManager().getRegionAt(block.getLocation());
         
+        // Jika tidak berada dalam region farming, biarkan default Minecraft behavior
+        if (region == null) {
+            return; // PERBAIKAN: Biarkan pemain menghancurkan blok di luar region
+        }
+        
+        // Jika di dalam region farming, terapkan aturan region farming
+        
         // If it's wheat in a farming region, handle specially
-        if (block.getType() == Material.WHEAT && region != null) {
+        if (block.getType() == Material.WHEAT) {
             // Penting: Set event.setCancelled(false) untuk override
             // proteksi WorldGuard yang sudah meng-cancel event
             event.setCancelled(false);
@@ -68,7 +75,15 @@ public class FarmingListener implements Listener {
             boolean isMature = ageable.getAge() == ageable.getMaximumAge();
 
             if (isMature) {
-                // Create custom crop drop
+                // Check harvest limit first
+                if (!plugin.getHarvestLimitManager().canHarvest(player)) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            "&cAnda telah mencapai batas panen hari ini. Silakan tunggu reset."));
+                    processingBlocks.remove(block);
+                    return;
+                }
+                
+                // Continue with the normal farming code
                 Material cropType = block.getType();
                 ItemStack heldItem = player.getInventory().getItemInMainHand();
                 
@@ -92,6 +107,14 @@ public class FarmingListener implements Listener {
                 // Drop any items that didn't fit in inventory
                 for (ItemStack item : leftover.values()) {
                     player.getWorld().dropItemNaturally(player.getLocation(), item);
+                }
+                
+                // Update harvest count
+                int remainingHarvests = plugin.getHarvestLimitManager().incrementHarvestCount(player, dropAmount);
+                if (remainingHarvests <= 50) {
+                    // Notify player when getting close to limit
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            "&eSisa kuota panen hari ini: &6" + remainingHarvests));
                 }
                 
                 // Award XP to the player based on crop and quality
@@ -133,18 +156,8 @@ public class FarmingListener implements Listener {
                 processingBlocks.remove(block);
             }
             return; // Important: exit method after handling wheat
-        }
-        
-        // At this point, it's either:
-        // 1. Not wheat
-        // 2. Wheat but not in a farming region
-        
-        // Only allow wheat blocks in farming regions
-        if (region != null && CropUtils.isSupportedCrop(block.getType())) {
-            // Continue with existing code for supported crops in farming regions
-            // [keep all the current farming region handling]
         } else {
-            // Cancel any other block breaking attempt
+            // Di dalam region tapi bukan wheat - cancel dan tampilkan pesan
             event.setCancelled(true);
             
             // Only show message if they tried to break something (not just clicking)
