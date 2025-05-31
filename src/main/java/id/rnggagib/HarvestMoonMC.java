@@ -16,6 +16,7 @@ import id.rnggagib.managers.SkillManager;
 import id.rnggagib.managers.WorldGuardManager;
 import id.rnggagib.gui.ShopGUI;
 import id.rnggagib.managers.HarvestLimitManager;
+import id.rnggagib.managers.LicenseManager;
 import id.rnggagib.managers.PlaceholderManager;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -41,7 +42,8 @@ public class HarvestMoonMC extends JavaPlugin {
     private WorldGuardManager worldGuardManager;
     private EventManager eventManager;
     private HarvestLimitManager harvestLimitManager; // Add this field to the class
-    
+    private LicenseManager licenseManager;
+
     // Deklarasi flag sebagai field statis
     public static StateFlag ALLOW_WHEAT_FARMING;
     
@@ -79,68 +81,73 @@ public class HarvestMoonMC extends JavaPlugin {
         saveDefaultConfig();
         config = getConfig();
         
-        // Initialize managers
-        selectionManager = new SelectionManager();
-        regionManager = new RegionManager(this);
-        economyManager = new EconomyManager(this);
-        skillManager = new SkillManager(this);
-        
-        // Initialize shop GUI
-        shopGUI = new ShopGUI(this);
-        
-        // Load farm regions
-        regionManager.loadRegions();
-        
-        // Register commands
-        getCommand("hmc").setExecutor(new HMCCommandExecutor(this));
-        
-        // Register listeners
-        getServer().getPluginManager().registerEvents(new WandListener(this), this);
-        getServer().getPluginManager().registerEvents(new FarmingListener(this), this);
-        
-        // Initialize WorldGuard manager
-        if (getServer().getPluginManager().getPlugin("WorldGuard") != null) {
-            worldGuardManager = new WorldGuardManager(this);
-            getLogger().info("WorldGuard integration initialized");
-        } else {
-            getLogger().info("WorldGuard not found, integration disabled");
-        }
-        
-        // Register PlaceholderAPI expansion if it's present
-        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            getLogger().info("PlaceholderAPI found, registering placeholders...");
-            new PlaceholderManager(this).register();
-        }
-        
-        // Initialize event manager
-        eventManager = new EventManager(this);
-        getLogger().info("Event Manager initialized");
-        
-        // Initialize harvest limit manager
-        harvestLimitManager = new HarvestLimitManager(this);
-        getLogger().info("Harvest Limit Manager initialized");
-        
-        LOGGER.info("harvestmoonmc enabled");
+        // Inisialisasi LicenseManager dan validasi lisensi sebelum plugin berjalan
+        licenseManager = new LicenseManager(this);
+        licenseManager.initialize();
+
+        // Cek validasi lisensi sebelum melanjutkan inisialisasi plugin
+        // (Jika lisensi tidak valid, plugin akan otomatis dinonaktifkan oleh LicenseManager)
+        getServer().getScheduler().runTaskLater(this, () -> {
+            if (!licenseManager.isValidated()) {
+                getLogger().severe("Lisensi tidak valid! Plugin dinonaktifkan.");
+                getServer().getPluginManager().disablePlugin(this);
+                return;
+            }
+
+            // Initialize managers
+            selectionManager = new SelectionManager();
+            regionManager = new RegionManager(this);
+            economyManager = new EconomyManager(this);
+            skillManager = new SkillManager(this);
+            
+            // Initialize shop GUI
+            shopGUI = new ShopGUI(this);
+            
+            // Load farm regions
+            regionManager.loadRegions();
+            
+            // Register commands
+            getCommand("hmc").setExecutor(new HMCCommandExecutor(this));
+            
+            // Register listeners
+            getServer().getPluginManager().registerEvents(new WandListener(this), this);
+            getServer().getPluginManager().registerEvents(new FarmingListener(this), this);
+            
+            // Initialize WorldGuard manager
+            if (getServer().getPluginManager().getPlugin("WorldGuard") != null) {
+                worldGuardManager = new WorldGuardManager(this);
+                getLogger().info("WorldGuard integration initialized");
+            } else {
+                getLogger().info("WorldGuard not found, integration disabled");
+            }
+            
+            // Register PlaceholderAPI expansion if it's present
+            if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+                getLogger().info("PlaceholderAPI found, registering placeholders...");
+                new PlaceholderManager(this).register();
+            }
+            
+            // Initialize event manager
+            eventManager = new EventManager(this);
+            getLogger().info("Event Manager initialized");
+            
+            // Initialize harvest limit manager
+            harvestLimitManager = new HarvestLimitManager(this);
+            getLogger().info("Harvest Limit Manager initialized");
+            
+            getLogger().info("HarvestMoonMC enabled successfully with valid license.");
+        }, 40L); // Delay 2 detik agar validasi async selesai
     }
     
     // Update onDisable method to ensure proper shutdown
     @Override
     public void onDisable() {
-        // Save farm regions and properly shut down
-        regionManager.shutdown();
-        skillManager.shutdown();
-        
-        // Shutdown event manager
-        if (eventManager != null) {
-            eventManager.shutdown();
-        }
-        
-        // Shutdown harvest limit manager
-        if (harvestLimitManager != null) {
-            harvestLimitManager.shutdown();
-        }
-        
-        LOGGER.info("harvestmoonmc disabled");
+        if (regionManager != null) regionManager.shutdown();
+        if (skillManager != null) skillManager.shutdown();
+        if (eventManager != null) eventManager.shutdown();
+        if (harvestLimitManager != null) harvestLimitManager.shutdown();
+        // Tambahkan manager lain jika ada
+        getLogger().info("HarvestMoonMC disabled.");
     }
     
     public static HarvestMoonMC getInstance() {
@@ -177,5 +184,9 @@ public class HarvestMoonMC extends JavaPlugin {
     
     public HarvestLimitManager getHarvestLimitManager() { // Add getter method
         return harvestLimitManager;
+    }
+
+    public LicenseManager getLicenseManager() {
+        return licenseManager;
     }
 }
