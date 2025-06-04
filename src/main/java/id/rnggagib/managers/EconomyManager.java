@@ -104,4 +104,14 @@ public class EconomyManager {
         if (!enabled) return false;
         return economy.has(player, amount);
     }
+    
+    /**
+     * Checks if a player has enough money
+     * @param player The player
+     * @param amount The amount to check
+     * @return true if player has enough money
+     */
+    public boolean hasMoney(Player player, double amount) {
+        return getBalance(player) >= amount;
+    }
 }

@@ -15,7 +15,7 @@ public class PlaceholderManager extends PlaceholderExpansion {
 
     @Override
     public String getIdentifier() {
-        return "hmc"; // Identifier untuk plugin ini (hmc)
+        return "df"; // Ubah dari "hmc" menjadi "df"
     }
 
     @Override

@@ -23,9 +23,9 @@ import java.util.Map;
 public class ShopGUI implements Listener {
     private final HarvestMoonMC plugin;
     private final Map<Player, Inventory> openShops = new HashMap<>();
-    private static final int SHOP_SIZE = 54; // 6 rows
-    private static final int INFO_SLOT = 4;
-    private static final int SELL_ALL_SLOT = 49;
+    private static final int SHOP_SIZE = 54; // 6 baris
+    private static final int INFO_SLOT = 4; // Baris pertama, slot ke-5 (indeks 4)
+    private static final int SELL_ALL_SLOT = 49; // Baris keenam, slot ke-5 (indeks 49)
     
     public ShopGUI(HarvestMoonMC plugin) {
         this.plugin = plugin;
@@ -37,7 +37,8 @@ public class ShopGUI implements Listener {
      * @param player The player
      */
     public void openShop(Player player) {
-        Inventory shopInventory = Bukkit.createInventory(null, SHOP_SIZE, "HarvestMoonMC Shop");
+        String shopTitle = plugin.getConfig().getString("customization.gui.shop_title", "HarvestMoonMC Shop");
+        Inventory shopInventory = Bukkit.createInventory(null, SHOP_SIZE, shopTitle);
         
         // Add info item
         ItemStack infoItem = createInfoItem(player);
@@ -46,10 +47,10 @@ public class ShopGUI implements Listener {
         // Add sell all button
         ItemStack sellAllItem = new ItemStack(Material.GOLD_INGOT);
         ItemMeta sellAllMeta = sellAllItem.getItemMeta();
-        sellAllMeta.setDisplayName(MessageUtils.colorize("&6&lSell All Crops"));
+        sellAllMeta.setDisplayName(MessageUtils.colorize("&6&lJual Semua Crop"));
         List<String> sellAllLore = new ArrayList<>();
-        sellAllLore.add(MessageUtils.colorize("&7Click to sell all crops"));
-        sellAllLore.add(MessageUtils.colorize("&7in your inventory"));
+        sellAllLore.add(MessageUtils.colorize("&7Klik untuk menjual semua crop"));
+        sellAllLore.add(MessageUtils.colorize("&7yang ada di inventory GUI ini."));
         sellAllMeta.setLore(sellAllLore);
         sellAllItem.setItemMeta(sellAllMeta);
         shopInventory.setItem(SELL_ALL_SLOT, sellAllItem);
@@ -60,10 +61,15 @@ public class ShopGUI implements Listener {
         dividerMeta.setDisplayName(" ");
         divider.setItemMeta(dividerMeta);
         
+        // Isi baris atas dengan divider, kecuali INFO_SLOT
         for (int i = 0; i < 9; i++) {
-            shopInventory.setItem(i, divider);
+            if (i != INFO_SLOT) {
+                shopInventory.setItem(i, divider);
+            }
         }
-        for (int i = 45; i < 54; i++) {
+        
+        // Isi baris bawah dengan divider, kecuali SELL_ALL_SLOT
+        for (int i = 45; i < SHOP_SIZE; i++) { // Dari slot 45 sampai 53
             if (i != SELL_ALL_SLOT) {
                 shopInventory.setItem(i, divider);
             }
@@ -81,7 +87,7 @@ public class ShopGUI implements Listener {
     private ItemStack createInfoItem(Player player) {
         ItemStack infoItem = new ItemStack(Material.BOOK);
         ItemMeta meta = infoItem.getItemMeta();
-        meta.setDisplayName(MessageUtils.colorize("&e&lHarvestMoonMC Shop"));
+        meta.setDisplayName(MessageUtils.colorize("&e&lDragFarm Shop")); // Ubah dari HarvestMoonMC Shop
         
         List<String> lore = new ArrayList<>();
         lore.add(MessageUtils.colorize("&7Place your crops in the empty slots"));

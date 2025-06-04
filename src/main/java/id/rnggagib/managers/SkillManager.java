@@ -2,9 +2,11 @@ package id.rnggagib.managers;
 
 import id.rnggagib.HarvestMoonMC;
 import id.rnggagib.models.PlayerSkill;
+import id.rnggagib.utils.ActionBarUtils;
 import id.rnggagib.utils.MessageUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -225,6 +227,91 @@ public class SkillManager {
         
         // Calculate final XP
         return (int) Math.round(baseXp * qualityMultiplier);
+    }
+    
+    /**
+     * Gets the base XP for a specific crop type
+     * @param cropType The crop material
+     * @return Base XP amount
+     */
+    public int getBaseXp(Material cropType) {
+        // Get base XP from config
+        ConfigurationSection baseXpSection = plugin.getConfig().getConfigurationSection("skills.base_xp");
+        if (baseXpSection != null && baseXpSection.contains(cropType.name())) {
+            return baseXpSection.getInt(cropType.name());
+        }
+        
+        // Default values if not in config
+        switch (cropType) {
+            case WHEAT:
+                return 2;
+            case CARROT:
+            case POTATO:
+                return 3;
+            case BEETROOT:
+                return 4;
+            default:
+                return 1;
+        }
+    }
+    
+    /**
+     * Adds XP to a player's farming skill
+     * @param player The player
+     * @param amount Amount of XP to add
+     */
+    public void addXp(Player player, int amount) {
+        // Get player skill
+        PlayerSkill skill = getSkill(player);
+        if (skill == null) {
+            skill = new PlayerSkill(player.getUniqueId());
+            playerSkills.put(player.getUniqueId(), skill);
+        }
+        
+        // Add XP and check if leveled up
+        boolean leveledUp = skill.addXp(amount);
+        
+        // Send XP notification based on config setting
+        String notificationType = plugin.getConfig().getString("skills.xp_notification", "actionbar");
+        boolean showTotalXp = plugin.getConfig().getBoolean("skills.total_xp_notification", false);
+        
+        String xpMessage;
+        if (showTotalXp) {
+            xpMessage = "&a+" + amount + " Farming XP &7(Total: " + skill.getXp() + "/" + skill.getXpForNextLevel() + ")";
+        } else {
+            xpMessage = "&a+" + amount + " Farming XP";
+        }
+        
+        if (leveledUp) {
+            // Level up notification (always show regardless of settings)
+            String levelUpMessage = "&6&lLevel Up! &eYour farming is now level &6" + skill.getLevel();
+            
+            // Send level up message
+            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + levelUpMessage));
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+        }
+        
+        // Send XP gain notification based on config
+        switch (notificationType.toLowerCase()) {
+            case "chat":
+                player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + xpMessage));
+                break;
+            case "actionbar":
+                ActionBarUtils.sendActionBar(player, MessageUtils.colorize(xpMessage));
+                break;
+            case "sound":
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.5f, 1.0f);
+                break;
+            case "none":
+                // Don't send any notification
+                break;
+            default:
+                ActionBarUtils.sendActionBar(player, MessageUtils.colorize(xpMessage));
+                break;
+        }
+        
+        // Save the updated skill data
+        saveSkills();
     }
     
     /**

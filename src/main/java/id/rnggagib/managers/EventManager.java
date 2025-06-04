@@ -26,6 +26,10 @@ public class EventManager {
     private int maxDuration = 15 * 60; // 15 minutes in seconds
     private int[] possibleMultipliers = {2, 3, 4};
     
+    // Webhook configuration
+    private boolean webhooksEnabled = false;
+    private String webhookUrl = "";
+    
     public EventManager(HarvestMoonMC plugin) {
         this.plugin = plugin;
         loadConfig();
@@ -53,6 +57,10 @@ public class EventManager {
             // Fallback if config is invalid
             possibleMultipliers = new int[]{2, 3, 4};
         }
+        
+        // Load webhook configuration
+        webhooksEnabled = plugin.getConfig().getBoolean("events.webhooks.enabled", false);
+        webhookUrl = plugin.getConfig().getString("events.webhooks.url", "");
     }
     
     /**
@@ -122,6 +130,11 @@ public class EventManager {
         
         broadcastEventMessage(message);
         
+        // Send webhook notification if enabled
+        if (webhooksEnabled && !webhookUrl.isEmpty() && plugin.getDiscordWebhookManager() != null) {
+            sendEventStartWebhook(currentMultiplier, durationInSeconds / 60);
+        }
+        
         // Schedule end of event
         Bukkit.getScheduler().runTaskLater(plugin, this::endEvent, durationInSeconds * 20L);
         
@@ -139,10 +152,10 @@ public class EventManager {
                     "&6&l✨ Event penjualan spesial telah berakhir!");
             broadcastEventMessage(message);
             
-            // Reset multiplier
-            currentMultiplier = 1;
-            
-            plugin.getLogger().info("Event penjualan spesial telah berakhir");
+            // Send webhook notification if enabled
+            if (webhooksEnabled && !webhookUrl.isEmpty() && plugin.getDiscordWebhookManager() != null) {
+                sendEventEndWebhook();
+            }
         }
     }
     
@@ -154,7 +167,25 @@ public class EventManager {
         
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.sendMessage(colorizedMessage);
-            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+        }
+    }
+    
+    /**
+     * Sends webhook notification for event start
+     */
+    private void sendEventStartWebhook(int multiplier, int durationMinutes) {
+        if (plugin.getDiscordWebhookManager() != null) {
+            plugin.getDiscordWebhookManager().sendEventStartNotification(webhookUrl, multiplier, durationMinutes);
+        }
+    }
+    
+    /**
+     * Sends webhook notification for event end
+     */
+    private void sendEventEndWebhook() {
+        if (plugin.getDiscordWebhookManager() != null) {
+            plugin.getDiscordWebhookManager().sendEventEndNotification(webhookUrl);
         }
     }
     
@@ -179,7 +210,9 @@ public class EventManager {
      * @return Seconds remaining, or 0 if no event is active
      */
     public int getRemainingTime() {
-        if (!eventActive.get()) return 0;
+        if (!eventActive.get()) {
+            return 0;
+        }
         
         long remainingMillis = eventEndTime - System.currentTimeMillis();
         return Math.max(0, (int)(remainingMillis / 1000));
@@ -196,8 +229,7 @@ public class EventManager {
         
         // End any active event
         if (eventActive.get()) {
-            eventActive.set(false);
-            currentMultiplier = 1;
+            endEvent();
         }
     }
     
@@ -211,12 +243,12 @@ public class EventManager {
     /**
      * Manually starts an event with specified parameters
      * @param multiplier The price multiplier to use
-     * @param durationSeconds The duration in seconds
+     * @param durationMinutes The duration in minutes
      * @return true if event started successfully, false if an event is already running
      */
-    public boolean startEventManually(int multiplier, int durationSeconds) {
+    public boolean startEventManually(int multiplier, int durationMinutes) {
         if (eventActive.get()) {
-            return false; // Can't start an event if one is already active
+            return false; // Event already running
         }
         
         // Cancel the current scheduled task if any
@@ -229,7 +261,7 @@ public class EventManager {
         currentMultiplier = multiplier;
         
         // Set duration
-        int durationInSeconds = durationSeconds;
+        int durationInSeconds = durationMinutes * 60;
         eventEndTime = System.currentTimeMillis() + (durationInSeconds * 1000L);
         
         // Set event as active
@@ -240,9 +272,14 @@ public class EventManager {
                 "&6&l✨ EVENT SPESIAL! &e&lJual tanaman dengan harga {multiplier}x lipat selama {duration} menit!");
         message = message
                 .replace("{multiplier}", String.valueOf(currentMultiplier))
-                .replace("{duration}", String.valueOf(durationInSeconds / 60));
+                .replace("{duration}", String.valueOf(durationMinutes));
         
         broadcastEventMessage(message);
+        
+        // Send webhook notification if enabled
+        if (webhooksEnabled && !webhookUrl.isEmpty() && plugin.getDiscordWebhookManager() != null) {
+            sendEventStartWebhook(currentMultiplier, durationMinutes);
+        }
         
         // Schedule end of event
         Bukkit.getScheduler().runTaskLater(plugin, this::endEvent, durationInSeconds * 20L);
@@ -253,7 +290,7 @@ public class EventManager {
                 (durationInSeconds + nextInterval) * 20L);
         
         plugin.getLogger().info("Event penjualan spesial dimulai secara manual dengan multiplier " + 
-                currentMultiplier + "x selama " + (durationInSeconds / 60) + " menit");
+                currentMultiplier + "x selama " + durationMinutes + " menit");
         
         return true;
     }
@@ -264,7 +301,7 @@ public class EventManager {
      */
     public boolean stopEventManually() {
         if (!eventActive.get()) {
-            return false;
+            return false; // No event running
         }
         
         // End the event
@@ -273,6 +310,7 @@ public class EventManager {
         // Schedule next random event
         if (eventTask != null) {
             eventTask.cancel();
+            eventTask = null;
         }
         
         int nextInterval = getRandomInterval();

@@ -73,7 +73,7 @@ grinding_system:
 
 # Messages
 messages:
-  prefix: "&6[HarvestMoonMC] &r"
+  prefix: "&6[DragFarm] &r"
   wand_given: "Farm Region Selection Wand diberikan."
   pos1_selected: "Posisi 1 dipilih: %x%, %y%, %z%"
   pos2_selected: "Posisi 2 dipilih: %x%, %y%, %z%"
@@ -89,11 +89,30 @@ messages:
   harvest_limit_reset: "&aKuota panen Anda telah direset!"
   harvest_limit_reached: "&cAnda telah mencapai batas panen hari ini. Silakan tunggu reset."
   harvest_remaining: "&eSisa kuota panen hari ini: &6{count}"
+  config_reloaded: "&aKonfigurasi plugin berhasil di-reload!"
+  need_hoe: "&cYou must use a specific farming hoe to harvest here!" # Changed for clarity
+  vanilla_hoe_in_farm_region: "&cYou can only use custom farming hoes in this region."
+  custom_hoe_outside_farm_region: "&cHoe can only be used at /warp farm."
+  zonk_harvest: "&c&lZONK! &r&cKamu tidak mendapatkan apa-apa dari panen ini."
+  special_ability_activated: "&aSpecial ability &e'Divine Harvest'&a activated!"
+  special_ability_cooldown: "&cAbility on cooldown! Time remaining: &e%time% seconds&c."
+  special_ability_no_money: "&cNot enough money to use this ability. Cost: &e%cost%&c."
+  special_ability_no_permission: "&cYou do not have permission to use this hoe's special ability."
+  special_ability_not_available: "&cThis hoe does not have this special ability or it's currently disabled."
+  special_ability_failed_region: "&cSpecial ability can only be used in farming regions." # This can be kept as a fallback
 
 # Farming Settings
 farming:
-  animation_delay_ticks: 10  # Delay between growth stages (in ticks, 20 ticks = 1 second)
-  enable_animations: true    # Set to false to disable growth animations
+  animation_delay_ticks: 10
+  enable_animations: true
+  zonk_chance_percent: 5.0
+  # Default Special Ability Settings (can be overridden per hoe in hoes.yml)
+  default_special_ability:
+    particle_type: "SMOKE_NORMAL" # Bukkit Particle enum name for grey particles
+    sound_activate: "ENTITY_PLAYER_ATTACK_SWEEP"
+    sound_impact: "BLOCK_GRASS_BREAK" # Sound when apple "lands" and harvests
+    apple_fall_height: 3.0 # Blocks above player
+    apple_fall_speed: -0.4 # Negative for downward
 
 # Skills System
 skills:
@@ -129,6 +148,10 @@ events:
     - 2
     - 3
     - 4
+  webhooks:
+    enabled: true
+    url: "https://discord.com/api/webhooks/1376932934711513159/2M7RVt7BaQ53zYHZQbfgqWJSugFi196qkMujUUxgDdUzIGhWdPsu8ZrexxtB9XdvW6z6"
+    # Gunakan URL diatas sebagai default, atau ganti dengan URL webhook Anda sendiri
 
 # Harvest settings
 harvest:
@@ -136,3 +159,29 @@ harvest:
   max_limit: 500
   min_reset_time_minutes: 60
   max_reset_time_minutes: 180
+
+# Hoe and GUI settings
+customization:
+  hoes:
+    lore_format: # Adjusted for potentially infinite durability
+      - "&7Harvest Multiplier: &a{multiplier}x"
+      - "{durability_text}" # Placeholder for dynamic durability text
+      - "{area_text}"
+      - "{replant_text}"
+      - "{special_ability_text}" # Placeholder for special ability lore
+    area_text: "&7Area: &a{width}x{height}"
+    replant_text: "&7Auto-replant: &aEnabled"
+    no_replant_text: "&7Auto-replant: &cDisabled"
+  gui:
+    shop_title: "Toko Penjualan Hasil Panen" # Contoh judul untuk ShopGUI (jual crop)
+    hoe_shop_main_title: "Toko Cangkul Kustom" # Judul baru untuk HoeShopGUI (beli cangkul)
+    upgrade_title: "Tingkatkan Cangkul Anda" # Contoh judul untuk HoeShopGUI (upgrade)
+    buy_button: "&a&lBeli ({price})" # Diperbarui agar lebih jelas
+    upgrade_button: "&a&lUpgrade Sekarang"
+    cancel_button: "&c&lBatal"
+    confirmation_message: "&aBerhasil {action}!"
+
+permissions:
+  dragonfarm.hoe.specialability:
+    description: Allows using the special ability of custom hoes.
+    default: op

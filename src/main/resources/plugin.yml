@@ -1,45 +1,62 @@
-name: HarvestMoonMC
+name: DragonFarm
 version: 1.0-SNAPSHOT
 main: id.rnggagib.HarvestMoonMC
 api-version: 1.20
 authors: [rnggagib]
-description: Harvest Moon-inspired farming plugin for Minecraft
+description: Custom farming plugin for Minecraft servers
 softdepend: [Vault, WorldGuard, PlaceholderAPI]
 
 commands:
-  hmc:
-    description: Main command for HarvestMoonMC
+  dragfarm:
+    description: Main command for DragonFarm
     usage: /<command> [subcommand] [args]
-    aliases: [harvestmoonmc]
+    aliases: [df]
+  hoeshop:
+    description: Open the hoe shop
+    usage: /<command>
+    aliases: []
+  farm:
+    description: Warps you to the farm.
+    usage: /farm
+    aliases: [fm]
 
 permissions:
-  harvestmoonmc.admin.wand:
+  dragfarm.admin.wand:
     description: Allows use of the region selection wand
     default: op
-  harvestmoonmc.admin.create:
+  dragfarm.admin.create:
     description: Allows creation of farming regions
     default: op
-  harvestmoonmc.admin.list:
+  dragfarm.admin.list:
     description: Allows listing of farming regions
     default: op
-  harvestmoonmc.admin.info:
+  dragfarm.admin.info:
     description: Allows viewing region details
     default: op
-  harvestmoonmc.admin.delete:
+  dragfarm.admin.delete:
     description: Allows deletion of farming regions
     default: op
-  harvestmoonmc.sell:
+  dragfarm.sell:
     description: Allows selling crops
     default: true
-  harvestmoonmc.shop:
+  dragfarm.shop:
     description: Allows access to the shop
     default: true
-  harvestmoonmc.stats:
+  dragfarm.stats:
     description: Allows checking farming skills
     default: true
-  harvestmoonmc.event:
+  dragfarm.event:
     description: Allows checking current event status
     default: true
-  harvestmoonmc.admin.event:
+  dragfarm.admin.event:
     description: Allows managing sale events
     default: op
+  dragfarm.admin.reload:
+    description: Allows reloading the plugin configuration
+    default: op
+  dragfarm.admin.hoe:
+    description: Allows managing custom hoes
+    default: op
+  dragfarm.hoe.upgrade:
+    description: Allows upgrading farming hoes
+    default: true

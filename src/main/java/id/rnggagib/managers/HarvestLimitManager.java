@@ -164,6 +164,14 @@ public class HarvestLimitManager {
     }
     
     /**
+     * Reloads settings from config
+     */
+    public void reloadConfig() {
+        loadConfig();
+        plugin.getLogger().info("Harvest limit configuration reloaded");
+    }
+    
+    /**
      * Shuts down the harvest limit manager
      */
     public void shutdown() {

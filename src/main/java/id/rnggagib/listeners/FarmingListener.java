@@ -2,11 +2,13 @@ package id.rnggagib.listeners;
 
 import id.rnggagib.HarvestMoonMC;
 import id.rnggagib.models.FarmingRegion;
+import id.rnggagib.models.CustomHoe;
 import id.rnggagib.utils.CropUtils;
 import id.rnggagib.utils.MessageUtils;
 import id.rnggagib.utils.QualityUtils;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.enchantments.Enchantment;
@@ -32,184 +34,299 @@ public class FarmingListener implements Listener {
         this.plugin = plugin;
     }
 
-    // Ubah priority dari HIGH menjadi HIGHEST agar dijalankan sebelum WorldGuard
+    // Method startGrowthAnimation tetap sama
+    public void startGrowthAnimation(Block block, Material cropMaterial) {
+        if (!plugin.getConfig().getBoolean("farming.enable_animations", true)) {
+            // Jika animasi dinonaktifkan, langsung set ke usia maksimal
+            if (CropUtils.isSupportedCrop(cropMaterial) && block.getBlockData() instanceof Ageable) {
+                Ageable ageable = (Ageable) block.getBlockData();
+                if (block.getType() == cropMaterial) { // Pastikan block masih crop yang benar
+                    ageable.setAge(ageable.getMaximumAge());
+                    block.setBlockData(ageable);
+                    block.getWorld().spawnParticle(org.bukkit.Particle.VILLAGER_HAPPY,
+                        block.getLocation().add(0.5, 0.5, 0.5), 5, 0.2, 0.2, 0.2, 0.01);
+                }
+            }
+            return;
+        }
+
+        if (!CropUtils.isSupportedCrop(cropMaterial) || !(block.getBlockData() instanceof Ageable)) {
+            return;
+        }
+
+        // Pastikan block adalah cropMaterial yang benar sebelum memulai
+        if (block.getType() != cropMaterial) {
+            block.setType(cropMaterial); // Set ke tipe crop yang benar jika belum
+            Ageable ageableData = (Ageable) block.getBlockData();
+            ageableData.setAge(0); // Mulai dari usia 0
+            block.setBlockData(ageableData);
+        } else {
+            // Jika sudah cropMaterial, pastikan usianya 0
+            Ageable ageableData = (Ageable) block.getBlockData();
+            if (ageableData.getAge() != 0) {
+                ageableData.setAge(0);
+                block.setBlockData(ageableData);
+            }
+        }
+
+        Ageable initialAgeable = (Ageable) block.getBlockData();
+        final int maxAge = initialAgeable.getMaximumAge();
+        final int animationDelay = plugin.getConfig().getInt("farming.animation_delay_ticks", 10); // Default 10 tick
+
+        new BukkitRunnable() {
+            int currentAge = 0; // Animasi dimulai dari usia 0
+
+            @Override
+            public void run() {
+                if (block.getType() != cropMaterial || !(block.getBlockData() instanceof Ageable)) {
+                    this.cancel(); // Block berubah, hentikan animasi
+                    return;
+                }
+
+                Ageable currentStageAgeable = (Ageable) block.getBlockData();
+
+                if (currentAge < maxAge) {
+                    currentAge++;
+                    currentStageAgeable.setAge(currentAge);
+                    block.setBlockData(currentStageAgeable);
+                    // Optional: partikel untuk setiap tahap
+                    // block.getWorld().spawnParticle(Particle.COMPOSTER, block.getLocation().add(0.5, 0.7, 0.5), 1, 0.1, 0.1, 0.1, 0);
+                } else {
+                    // Mencapai usia maksimal
+                    block.getWorld().spawnParticle(org.bukkit.Particle.VILLAGER_HAPPY,
+                        block.getLocation().add(0.5, 0.5, 0.5), 10, 0.3, 0.3, 0.3, 0.01);
+                    this.cancel();
+                }
+            }
+        }.runTaskTimer(plugin, animationDelay, animationDelay);
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onBlockBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
         Player player = event.getPlayer();
 
-        // Check if player is in creative mode or has admin permission
-        if (player.getGameMode() == GameMode.CREATIVE || player.hasPermission("harvestmoonmc.admin.bypass")) {
-            return; // Allow creative mode and admins to break anything
+        if (player.getGameMode() == GameMode.CREATIVE || player.hasPermission("dragfarm.admin.bypass")) {
+            return;
         }
 
-        // Get the farming region at this location
+        ItemStack heldItemForCheck = player.getInventory().getItemInMainHand();
+        CustomHoe customHoeForCheck = plugin.getHoeManager().getHoeFromItemStack(heldItemForCheck);
         FarmingRegion region = plugin.getRegionManager().getRegionAt(block.getLocation());
-        
-        // Jika tidak berada dalam region farming, biarkan default Minecraft behavior
-        if (region == null) {
-            return; // PERBAIKAN: Biarkan pemain menghancurkan blok di luar region
+
+        if (customHoeForCheck != null && region == null) { // Custom hoe used OUTSIDE a farming region
+            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") +
+                    plugin.getConfig().getString("messages.custom_hoe_outside_farm_region")));
+            event.setCancelled(true);
+            return;
+        }
+
+        if (region == null) { // Not in a farming region, and not a custom hoe (already handled above)
+            return; // Allow default behavior or other plugins
         }
         
-        // Jika di dalam region farming, terapkan aturan region farming
+        // From here, we are INSIDE a farming region
+        event.setCancelled(true); // Default cancel for farming regions
         
-        // If it's wheat in a farming region, handle specially
-        if (block.getType() == Material.WHEAT) {
-            // Penting: Set event.setCancelled(false) untuk override
-            // proteksi WorldGuard yang sudah meng-cancel event
-            event.setCancelled(false);
-            
-            // Lalu cancel kita sendiri agar bisa mengatur custom behavior
-            event.setCancelled(true);
-            
-            // Continue with the normal farming code
-            // Prevent duplicate processing
+        Material originalCropType = block.getType();
+
+        if (CropUtils.isSupportedCrop(originalCropType) && block.getBlockData() instanceof Ageable) {
+            // event.setCancelled(false); // No longer needed as we handle drops directly
+            // event.setCancelled(true);  // Already set above
+
             if (processingBlocks.contains(block)) {
                 return;
             }
-            
             processingBlocks.add(block);
-            
-            // Get the crop's growth stage
+
             Ageable ageable = (Ageable) block.getBlockData();
             boolean isMature = ageable.getAge() == ageable.getMaximumAge();
 
+            ItemStack heldItem = player.getInventory().getItemInMainHand(); // Re-get in case it changed, though unlikely here
+            if (!isValidFarmingTool(heldItem)) { // This now checks for custom hoe
+                Material itemType = heldItem.getType();
+                if (itemType == Material.WOODEN_HOE || itemType == Material.STONE_HOE ||
+                    itemType == Material.IRON_HOE || itemType == Material.GOLDEN_HOE ||
+                    itemType == Material.DIAMOND_HOE || itemType == Material.NETHERITE_HOE) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") +
+                            plugin.getConfig().getString("messages.vanilla_hoe_in_farm_region")));
+                } else {
+                     player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") +
+                            plugin.getConfig().getString("messages.need_hoe"))); // "need_hoe" implies custom now
+                }
+                processingBlocks.remove(block);
+                return;
+            }
+
             if (isMature) {
-                // Check harvest limit first
                 if (!plugin.getHarvestLimitManager().canHarvest(player)) {
                     player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                            "&cAnda telah mencapai batas panen hari ini. Silakan tunggu reset."));
+                            plugin.getConfig().getString("messages.harvest_limit_reached"))); // Message for limit still exists
                     processingBlocks.remove(block);
                     return;
                 }
                 
-                // Continue with the normal farming code
-                Material cropType = block.getType();
-                ItemStack heldItem = player.getInventory().getItemInMainHand();
+                double zonkChancePercent = plugin.getConfig().getDouble("farming.zonk_chance_percent", 0.0);
+                boolean isZonk = random.nextDouble() * 100 < zonkChancePercent;
+
+                id.rnggagib.models.CustomHoe customHoe = plugin.getHoeManager().getHoeFromItemStack(heldItem);
+
+                if (isZonk) {
+                    // player.sendMessage(...) // ZONK MESSAGE REMOVED
+
+                    block.setType(originalCropType);
+                    Ageable newMainCropData = (Ageable) block.getBlockData();
+                    newMainCropData.setAge(0);
+                    block.setBlockData(newMainCropData);
+                    startGrowthAnimation(block, originalCropType);
+
+                    if (customHoe != null && (customHoe.getAreaWidth() > 1 || customHoe.getAreaHeight() > 1)) {
+                        List<Block> areaBlocks = plugin.getHoeManager().getAreaBlocks(block, customHoe, player);
+                        for (Block areaBlock : areaBlocks) {
+                            if (areaBlock.equals(block)) continue;
+                            Material areaOriginalCropType = areaBlock.getType();
+                            if (CropUtils.isSupportedCrop(areaOriginalCropType) && areaBlock.getBlockData() instanceof Ageable) {
+                                Ageable areaAgeable = (Ageable) areaBlock.getBlockData();
+                                if (areaAgeable.getAge() == areaAgeable.getMaximumAge()) {
+                                    if (processingBlocks.contains(areaBlock)) continue;
+                                    processingBlocks.add(areaBlock);
+
+                                    areaBlock.setType(areaOriginalCropType);
+                                    Ageable newAreaCropData = (Ageable) areaBlock.getBlockData();
+                                    newAreaCropData.setAge(0);
+                                    areaBlock.setBlockData(newAreaCropData);
+                                    startGrowthAnimation(areaBlock, areaOriginalCropType);
+                                    
+                                    processingBlocks.remove(areaBlock);
+                                }
+                            }
+                        }
+                    }
+                    processingBlocks.remove(block);
+                    return;
+                }
+
+                // --- JIKA TIDAK ZONK, LANJUTKAN PANEN NORMAL ---
+                Material cropType = block.getType(); // originalCropType bisa digunakan di sini
                 
-                // Calculate crop quality and create custom drop
+                // customHoe sudah didapatkan di atas sebelum cek zonk
+                
                 Map<String, Object> qualityInfo = QualityUtils.calculateQuality(plugin, cropType, heldItem, player);
                 String qualityTier = (String) qualityInfo.get("tier");
                 String displayName = (String) qualityInfo.get("displayName");
                 String colorCode = (String) qualityInfo.get("colorCode");
                 double price = (Double) qualityInfo.get("price");
                 
-                // Create the custom crop item
-                ItemStack customCrop = createCustomCrop(cropType, qualityTier, displayName, colorCode, price);
-                
-                // Calculate drop amount (consider Fortune enchantment)
+                ItemStack customCropItem = createCustomCrop(cropType, qualityTier, displayName, colorCode, price);
                 int dropAmount = calculateDropAmount(heldItem, cropType);
-                customCrop.setAmount(dropAmount);
                 
-                // Give item to player
-                HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(customCrop);
+                if (customHoe != null) {
+                    dropAmount *= customHoe.getHarvestMultiplier();
+                    ItemStack updatedHoe = plugin.getHoeManager().useDurability(player, heldItem); // Pass player here
+                    if (updatedHoe == null) {
+                        // This logic is now handled within useDurability if the hoe breaks.
+                        // player.getInventory().setItemInMainHand(null);
+                        // player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
+                        // player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                        //         "&cYour farming hoe broke!"));
+                        // The item in hand will be set to null by useDurability if it broke.
+                    } else {
+                        player.getInventory().setItemInMainHand(updatedHoe);
+                    }
+                }
                 
-                // Drop any items that didn't fit in inventory
+                customCropItem.setAmount(dropAmount);
+                HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(customCropItem);
                 for (ItemStack item : leftover.values()) {
                     player.getWorld().dropItemNaturally(player.getLocation(), item);
                 }
                 
-                // Update harvest count
-                int remainingHarvests = plugin.getHarvestLimitManager().incrementHarvestCount(player, dropAmount);
-                if (remainingHarvests <= 50) {
-                    // Notify player when getting close to limit
-                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                            "&eSisa kuota panen hari ini: &6" + remainingHarvests));
-                }
+                plugin.getHarvestLimitManager().incrementHarvestCount(player, dropAmount);
+                double xpMultiplier = QualityUtils.getXpMultiplier(qualityTier);
+                int xpGained = (int) Math.round(plugin.getSkillManager().getBaseXp(cropType) * xpMultiplier);
+                plugin.getSkillManager().addXp(player, xpGained);
                 
-                // Award XP to the player based on crop and quality
-                int xpAmount = plugin.getSkillManager().getCropXp(cropType, qualityTier);
-                boolean leveledUp = plugin.getSkillManager().awardXp(player, xpAmount);
+                // Tanam ulang blok utama (setelah panen berhasil)
+                block.setType(originalCropType);
+                Ageable newCropData = (Ageable) block.getBlockData();
+                newCropData.setAge(0);
+                block.setBlockData(newCropData);
+                startGrowthAnimation(block, originalCropType);
 
-                // Handle XP notification based on config
-                String notificationType = plugin.getConfig().getString("skills.xp_notification", "actionbar");
-                if (notificationType.equalsIgnoreCase("chat")) {
-                    // Send as chat message (original method)
-                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                            plugin.getConfig().getString("messages.xp_gained").replace("%amount%", String.valueOf(xpAmount))));
-                } else if (notificationType.equalsIgnoreCase("actionbar")) {
-                    // Send as action bar (less intrusive)
-                    player.spigot().sendMessage(
-                        net.md_5.bungee.api.ChatMessageType.ACTION_BAR,
-                        net.md_5.bungee.api.chat.TextComponent.fromLegacyText(MessageUtils.colorize("&a+" + xpAmount + " Farming XP"))
-                    );
-                } else if (!notificationType.equalsIgnoreCase("none")) {
-                    // Default to actionbar if invalid option
-                    player.spigot().sendMessage(
-                        net.md_5.bungee.api.ChatMessageType.ACTION_BAR,
-                        net.md_5.bungee.api.chat.TextComponent.fromLegacyText(MessageUtils.colorize("&a+" + xpAmount + " Farming XP"))
-                    );
+                // Panen AoE (jika tidak zonk)
+                if (customHoe != null && (customHoe.getAreaWidth() > 1 || customHoe.getAreaHeight() > 1)) {
+                    List<Block> areaBlocks = plugin.getHoeManager().getAreaBlocks(block, customHoe, player);
+                    for (Block areaBlock : areaBlocks) {
+                        if (areaBlock.equals(block)) continue;
+                        Material areaOriginalCropType = areaBlock.getType();
+                        if (CropUtils.isSupportedCrop(areaOriginalCropType) && areaBlock.getBlockData() instanceof Ageable) {
+                            Ageable areaAgeable = (Ageable) areaBlock.getBlockData();
+                            if (areaAgeable.getAge() == areaAgeable.getMaximumAge()) {
+                                if (processingBlocks.contains(areaBlock)) continue;
+                                processingBlocks.add(areaBlock);
+
+                                // Logika panen untuk blok AoE
+                                Map<String, Object> areaQualityInfo = QualityUtils.calculateQuality(plugin, areaOriginalCropType, heldItem, player);
+                                ItemStack areaCropItem = createCustomCrop(
+                                        areaOriginalCropType, 
+                                        (String) areaQualityInfo.get("tier"),
+                                        (String) areaQualityInfo.get("displayName"),
+                                        (String) areaQualityInfo.get("colorCode"),
+                                        (Double) areaQualityInfo.get("price")
+                                );
+                                int areaDropAmount = calculateDropAmount(heldItem, areaOriginalCropType);
+                                if (customHoe != null) { // Perlu cek lagi karena bisa jadi hoe utama pecah
+                                     areaDropAmount *= customHoe.getHarvestMultiplier();
+                                }
+                                areaCropItem.setAmount(areaDropAmount);
+                                HashMap<Integer, ItemStack> areaLeftover = player.getInventory().addItem(areaCropItem);
+                                for (ItemStack item : areaLeftover.values()) {
+                                    player.getWorld().dropItemNaturally(player.getLocation(), item);
+                                }
+                                plugin.getHarvestLimitManager().incrementHarvestCount(player, areaDropAmount);
+                                double areaXpMultiplier = QualityUtils.getXpMultiplier((String) areaQualityInfo.get("tier"));
+                                int areaXpGained = (int) Math.round(plugin.getSkillManager().getBaseXp(areaOriginalCropType) * areaXpMultiplier);
+                                plugin.getSkillManager().addXp(player, areaXpGained);
+                                
+                                // Tanam ulang blok AoE
+                                areaBlock.setType(areaOriginalCropType);
+                                Ageable newAreaCropData = (Ageable) areaBlock.getBlockData();
+                                newAreaCropData.setAge(0);
+                                areaBlock.setBlockData(newAreaCropData);
+                                startGrowthAnimation(areaBlock, areaOriginalCropType);
+
+                                processingBlocks.remove(areaBlock);
+                            }
+                        }
+                    }
                 }
-
-                // Reset crop age to 0 (seedling)
-                Material cropMaterial = block.getType();
-                Ageable newAgeable = (Ageable) cropMaterial.createBlockData();
-                newAgeable.setAge(0);
-                block.setBlockData(newAgeable);
-
-                // Start growth animation
-                startGrowthAnimation(block);
-            } else {
-                // If crop is not mature, just cancel and inform player
-                player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                        "&cTanaman belum siap dipanen!"));
-                processingBlocks.remove(block);
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.5f, 1.2f);
+                processingBlocks.remove(block); // Hapus blok utama dari processing
+            } else { // Tanaman belum matang
+                // player.sendMessage(...) // "NOT READY TO HARVEST" MESSAGE REMOVED
+                processingBlocks.remove(block); // Still remove from processing if not mature
             }
-            return; // Important: exit method after handling wheat
-        } else {
-            // Di dalam region tapi bukan wheat - cancel dan tampilkan pesan
-            event.setCancelled(true);
-            
-            // Only show message if they tried to break something (not just clicking)
-            if (!player.isSneaking() && player.getGameMode() != GameMode.SPECTATOR) {
-                player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                        "&cAnda hanya dapat memanen tanaman gandum di region pertanian."));
-            }
+            // Ensure processingBlocks.remove(block) is called in all paths if block was added.
+            // It's generally handled within the if(isMature) branches.
+            // If not mature, it's removed. If mature and zonk, removed. If mature and success, removed.
+            // The return after the main if (CropUtils.isSupportedCrop...) is fine.
+            return; 
+        } else if (region != null) { 
+             // This part is for when it's in a farming region but NOT a supported crop type.
+             // No message needed here by default unless you want to tell them they can't break *this specific block*
+             // event.setCancelled(true); // Already set at the start of region check
         }
+        // If it falls through, event was cancelled if in region, or returned if not.
     }
 
-    private void startGrowthAnimation(Block block) {
-        Material cropType = block.getType();
-        Ageable ageable = (Ageable) block.getBlockData();
-        int maxAge = ageable.getMaximumAge();
-        
-        // Schedule task to animate growth
-        new BukkitRunnable() {
-            int currentAge = 0;
-            int animationDelay = plugin.getConfig().getInt("farming.animation_delay_ticks", 5);
-
-            @Override
-            public void run() {
-                // Check if block still exists and is still a crop
-                if (!block.getType().equals(cropType) || currentAge >= maxAge) {
-                    processingBlocks.remove(block);
-                    this.cancel();
-                    return;
-                }
-
-                // Increment the age
-                currentAge++;
-                if (currentAge <= maxAge) {
-                    Ageable blockData = (Ageable) block.getBlockData();
-                    blockData.setAge(currentAge);
-                    block.setBlockData(blockData);
-                } else {
-                    processingBlocks.remove(block);
-                    this.cancel();
-                }
-            }
-        }.runTaskTimer(plugin, 5L, 10L); // Run every 10 ticks (0.5 seconds), starting 5 ticks later
-    }
-
-    private ItemStack createCustomCrop(Material cropType, String qualityTier, String displayName, String colorCode, double price) {
+    // Method createCustomCrop tetap sama
+    public ItemStack createCustomCrop(Material cropType, String qualityTier, String displayName, String colorCode, double price) {
         Material dropType = CropUtils.getCropDrop(cropType);
         ItemStack customItem = new ItemStack(dropType);
         ItemMeta meta = customItem.getItemMeta();
         
-        // Set display name with quality
         meta.setDisplayName(MessageUtils.colorize(colorCode + CropUtils.getCropName(cropType) + " " + displayName));
         
-        // Set lore with quality and price
         List<String> lore = new ArrayList<>();
         lore.add(MessageUtils.colorize("&7Kualitas: " + colorCode + displayName));
         lore.add(MessageUtils.colorize("&7Harga Jual: &6" + price + " Koin"));
@@ -219,21 +336,27 @@ public class FarmingListener implements Listener {
         return customItem;
     }
 
-    private int calculateDropAmount(ItemStack tool, Material cropType) {
+    // Method calculateDropAmount tetap sama
+    public int calculateDropAmount(ItemStack tool, Material cropType) {
         int baseAmount = CropUtils.getBaseDropAmount(cropType);
         
-        // Check if tool has Fortune enchantment
         if (tool != null && tool.getEnchantments().containsKey(Enchantment.LOOT_BONUS_BLOCKS)) {
             int fortuneLevel = tool.getEnchantmentLevel(Enchantment.LOOT_BONUS_BLOCKS);
-            
-            // Fortune formula: random chance to increase drops by level
             for (int i = 0; i < fortuneLevel; i++) {
-                if (random.nextFloat() <= 0.4f) { // 40% chance per level
+                if (random.nextInt(100) < (33 + (fortuneLevel * 10))) { // Peluang meningkat dengan level
                     baseAmount++;
                 }
             }
         }
-        
         return baseAmount;
+    }
+
+    // Method isValidFarmingTool tetap sama
+    private boolean isValidFarmingTool(ItemStack item) {
+        if (item == null || item.getType() == Material.AIR) {
+            return false;
+        }
+        // Only custom hoes are valid tools in farming regions now
+        return plugin.getHoeManager().getHoeFromItemStack(item) != null;
     }
 }

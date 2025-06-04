@@ -10,37 +10,7 @@ public class PlayerSkill {
     
     // XP needed for each level
     private static final int[] XP_REQUIREMENTS = {
-        0,      // Level 1 (starting level)
-        100,    // Level 2
-        250,    // Level 3
-        500,    // Level 4
-        1000,   // Level 5
-        2000,   // Level 6
-        3500,   // Level 7
-        5500,   // Level 8
-        8000,   // Level 9
-        11000,  // Level 10
-        14500,  // Level 11
-        18500,  // Level 12
-        23000,  // Level 13
-        28000,  // Level 14
-        33500,  // Level 15
-        39500,  // Level 16
-        46000,  // Level 17
-        53000,  // Level 18
-        60500,  // Level 19
-        68500,  // Level 20
-        77000,  // Level 21
-        86000,  // Level 22
-        95500,  // Level 23
-        105500, // Level 24
-        116000, // Level 25
-        127000, // Level 26
-        138500, // Level 27
-        150500, // Level 28
-        163000, // Level 29
-        176000, // Level 30
-    };
+        0,        150,        375,        750,        1500,        3000,        5250,        8250,        12000,        16500,        21750,        27750,        34500,        42000,        50250,        59250,        69000,        79500,        90750,        102750,        115500,        129000,        143250,        158250,        174000,        190500,        207750,        225750,        244500,        264000    };
     
     private static final int MAX_LEVEL = 30;
     

@@ -133,4 +133,25 @@ public class QualityUtils {
         
         return modifier;
     }
+    
+    public static double getXpMultiplier(String qualityTier) {
+        // Get quality XP multiplier from config
+        if (HarvestMoonMC.getInstance().getConfig().contains("skills.quality_xp_multiplier." + qualityTier)) {
+            return HarvestMoonMC.getInstance().getConfig().getDouble("skills.quality_xp_multiplier." + qualityTier);
+        }
+        
+        // Default values if not in config
+        switch (qualityTier) {
+            case "COMMON":
+                return 1.0;
+            case "UNCOMMON":
+                return 1.5;
+            case "RARE":
+                return 2.0;
+            case "EPIC":
+                return 3.0;
+            default:
+                return 1.0;
+        }
+    }
 }

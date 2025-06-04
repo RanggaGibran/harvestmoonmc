@@ -1,0 +1,93 @@
+# Custom Farming Hoes Configuration
+
+hoes:
+  basic_hoe:
+    name: "&aBasic Farming Hoe"
+    material: IRON_HOE
+    custom_model_data: 1001
+    lore:
+      - "&7A basic farming tool"
+      - "&7Harvest Multiplier: &a2x"
+    harvest_multiplier: 2
+    durability: 0 # 0 or -1 for infinite
+    special_ability:
+      enabled: false
+
+  farming_hoe:
+    name: "&bFarming Hoe"
+    material: DIAMOND_HOE
+    custom_model_data: 1002
+    lore:
+      - "&7An improved farming tool"
+      - "&7Harvest Multiplier: &a3x"
+      - "&7Area: &a3x1"
+    harvest_multiplier: 3
+    durability: 0 # Infinite
+    area:
+      width: 3
+      height: 1
+    upgrade:
+      next_tier: super_hoe
+      cost: 15000
+      materials:
+        DIAMOND: 5
+        EMERALD: 3
+        NETHERITE_INGOT: 1
+    special_ability:
+      enabled: true
+      type: "divine_harvest" # default type
+      radius: 2
+      cooldown: 120
+      cost: 50.0
+      lore_text: "&eShift+Right Click: Minor Divine Harvest"
+
+  super_hoe:
+    name: "&dSuper Farming Hoe"
+    material: NETHERITE_HOE
+    custom_model_data: 1003
+    lore:
+      - "&7A powerful farming tool"
+      - "&7Harvest Multiplier: &a4x"
+      - "&7Area: &a3x3"
+    harvest_multiplier: 4
+    durability: 0 # Infinite
+    area:
+      width: 3
+      height: 3
+    upgrade:
+      next_tier: ultimate_hoe
+      cost: 50000
+      materials:
+        NETHERITE_INGOT: 3
+        EMERALD_BLOCK: 2
+    special_ability:
+      enabled: true
+      type: "divine_harvest" # default type
+      radius: 3
+      cooldown: 90
+      cost: 150.0
+      lore_text: "&eShift+Right Click: Divine Harvest"
+
+  ultimate_hoe:
+    name: "&6&lUltimate Farming Hoe"
+    material: NETHERITE_HOE
+    custom_model_data: 1004
+    glow: true
+    lore:
+      - "&7The ultimate farming tool"
+      - "&7Harvest Multiplier: &a6x"
+      - "&7Area: &a5x5"
+      - "&7Auto-replant: &aEnabled"
+    harvest_multiplier: 6
+    durability: 0 # Infinite
+    area:
+      width: 5
+      height: 5
+    auto_replant: true
+    special_ability:
+      enabled: true
+      type: "bomb" # New ability type
+      radius: 5
+      cooldown: 60
+      cost: 300.0
+      lore_text: "&eShift+Right Click: Bomb Skill"

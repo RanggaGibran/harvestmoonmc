@@ -18,7 +18,7 @@ public class WandUtils {
         List<String> lore = new ArrayList<>();
         lore.add(MessageUtils.colorize("&7Left-click to select position 1"));
         lore.add(MessageUtils.colorize("&7Right-click to select position 2"));
-        lore.add(MessageUtils.colorize("&7Then use &e/hmc create <name>&7 to create a region"));
+        lore.add(MessageUtils.colorize("&7Then use &e/df create <name>&7 to create a region"));
         
         meta.setLore(lore);
         wand.setItemMeta(meta);

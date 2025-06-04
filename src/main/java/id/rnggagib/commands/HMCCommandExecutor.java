@@ -7,6 +7,8 @@ import id.rnggagib.utils.WandUtils;
 import id.rnggagib.utils.CropPriceUtils;
 import id.rnggagib.gui.ShopGUI;
 import id.rnggagib.models.PlayerSkill;
+import id.rnggagib.models.CustomHoe;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -15,6 +17,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Random;
+import java.util.Set;
 
 public class HMCCommandExecutor implements CommandExecutor {
     private final HarvestMoonMC plugin;
@@ -45,7 +48,7 @@ public class HMCCommandExecutor implements CommandExecutor {
             case "create":
                 if (args.length < 2) {
                     player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                            "Usage: /hmc create <region_name>"));
+                            "Usage: /df create <region_name>"));
                     return true;
                 }
                 return handleCreateCommand(player, args[1]);
@@ -54,14 +57,14 @@ public class HMCCommandExecutor implements CommandExecutor {
             case "info":
                 if (args.length < 2) {
                     player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                            "Usage: /hmc info <region_name>"));
+                            "Usage: /df info <region_name>"));
                     return true;
                 }
                 return handleInfoCommand(player, args[1]);
             case "delete":
                 if (args.length < 2) {
                     player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                            "Usage: /hmc delete <region_name>"));
+                            "Usage: /df delete <region_name>"));
                     return true;
                 }
                 return handleDeleteCommand(player, args[1]);
@@ -69,6 +72,18 @@ public class HMCCommandExecutor implements CommandExecutor {
                 return handleSellCommand(player, args.length > 1 ? args[1] : null);
             case "shop":
                 return handleShopCommand(player);
+            case "hoeshop":
+                plugin.getHoeShopGUI().openBuyShop(player);
+                return true;
+            case "upgradegui":
+                ItemStack heldItem = player.getInventory().getItemInMainHand();
+                if (heldItem == null || heldItem.getType().isAir()) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            "&cAnda harus memegang custom farming hoe untuk meng-upgrade!"));
+                    return true;
+                }
+                plugin.getHoeShopGUI().openUpgradeShop(player, heldItem);
+                return true;
             case "help":
             case "stats":
                 return handleStatsCommand(player);
@@ -90,6 +105,12 @@ public class HMCCommandExecutor implements CommandExecutor {
                 } else {
                     return handleEventCommand(player);
                 }
+            case "reload":
+            case "reloadconfig":
+                return handleReloadCommand(player);
+            case "hoe":
+            case "tool":
+                return handleHoeCommand(player, args);
             default:
                 sendHelpMessage(player);
                 return true;
@@ -237,7 +258,7 @@ public class HMCCommandExecutor implements CommandExecutor {
             return sellHandItem(player);
         } else {
             player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                    "&7Usage: /hmc sell <hand|all>"));
+                    "&7Usage: /df sell <hand|all>"));
             return true;
         }
     }
@@ -518,17 +539,196 @@ public class HMCCommandExecutor implements CommandExecutor {
         return true;
     }
 
+    /**
+     * Handles the reload config command
+     */
+    private boolean handleReloadCommand(Player player) {
+        if (!player.hasPermission("harvestmoonmc.admin.reload")) {
+            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                    plugin.getConfig().getString("messages.no_permission")));
+            return true;
+        }
+        
+        // Reload main plugin config
+        plugin.reloadConfig();
+        
+        // Reload managers that use config values
+        if (plugin.getEventManager() != null) {
+            plugin.getEventManager().reloadConfig();
+        }
+        
+        if (plugin.getHarvestLimitManager() != null) {
+            plugin.getHarvestLimitManager().reloadConfig();
+        }
+        
+        // Add other managers that need config reloading here
+        
+        player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                "&aKonfigurasi plugin berhasil di-reload!"));
+        
+        return true;
+    }
+
+    private boolean handleHoeCommand(Player player, String[] args) {
+        if (args.length < 2) {
+            sendHoeHelp(player);
+            return true;
+        }
+        
+        String subCommand = args[1].toLowerCase();
+        
+        switch (subCommand) {
+            case "get":
+                if (!player.hasPermission("harvestmoonmc.admin.hoe")) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            plugin.getConfig().getString("messages.no_permission")));
+                    return true;
+                }
+                
+                if (args.length < 3) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            "&cUsage: /df hoe get <hoe_id>"));
+                    return true;
+                }
+                
+                String hoeId = args[2].toLowerCase();
+                ItemStack hoe = plugin.getHoeManager().createHoe(hoeId);
+                
+                if (hoe == null) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            "&cInvalid hoe ID: " + hoeId));
+                    return true;
+                }
+                
+                player.getInventory().addItem(hoe);
+                player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                        "&aYou received a " + hoe.getItemMeta().getDisplayName() + "&a!"));
+                return true;
+                
+            case "list":
+                if (!player.hasPermission("harvestmoonmc.admin.hoe")) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            plugin.getConfig().getString("messages.no_permission")));
+                    return true;
+                }
+                
+                Set<String> hoeIds = plugin.getHoeManager().getAllHoeIds();
+                player.sendMessage(MessageUtils.colorize("&6==== Custom Hoes ===="));
+                for (String id : hoeIds) {
+                    player.sendMessage(MessageUtils.colorize("&e- " + id));
+                }
+                return true;
+                
+            case "upgrade":
+                ItemStack heldItem = player.getInventory().getItemInMainHand();
+                CustomHoe customHoe = plugin.getHoeManager().getHoeFromItemStack(heldItem);
+                
+                if (customHoe == null) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            "&cYou must hold a custom farming hoe to upgrade it!"));
+                    return true;
+                }
+                
+                plugin.getHoeManager().upgradeHoe(heldItem, player);
+                return true;
+                
+            case "reload":
+                if (!player.hasPermission("harvestmoonmc.admin.reload")) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            plugin.getConfig().getString("messages.no_permission")));
+                    return true;
+                }
+                
+                plugin.getHoeManager().reloadConfig();
+                player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                        "&aHoes configuration reloaded!"));
+                return true;
+                
+            case "give":
+                if (!player.hasPermission("harvestmoonmc.admin.hoe.give")) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            plugin.getConfig().getString("messages.no_permission")));
+                    return true;
+                }
+                
+                if (args.length < 4) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            "&cUsage: /df hoe give <player> <hoe_id>"));
+                    return true;
+                }
+                
+                // Get target player
+                Player targetPlayer = Bukkit.getPlayer(args[2]);
+                if (targetPlayer == null) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            "&cPlayer '" + args[2] + "' not found or offline."));
+                    return true;
+                }
+                
+                // Get hoe
+                String giveHoeId = args[3].toLowerCase();
+                ItemStack giveHoe = plugin.getHoeManager().createHoe(giveHoeId);
+                
+                if (giveHoe == null) {
+                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                            "&cInvalid hoe ID: " + giveHoeId));
+                    return true;
+                }
+                
+                // Give hoe to target player
+                targetPlayer.getInventory().addItem(giveHoe);
+                
+                // Notify both players
+                player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                        "&aYou gave " + targetPlayer.getName() + " a " + giveHoe.getItemMeta().getDisplayName() + "&a!"));
+                targetPlayer.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
+                        "&aYou received a " + giveHoe.getItemMeta().getDisplayName() + "&a from " + player.getName() + "!"));
+                return true;
+                
+            default:
+                sendHoeHelp(player);
+                return true;
+        }
+    }
+
+    /**
+     * Sends hoe command help
+     */
+    private void sendHoeHelp(Player player) {
+        player.sendMessage(MessageUtils.colorize("&6==== Custom Hoes ===="));
+        player.sendMessage(MessageUtils.colorize("&e/df hoe upgrade &7- Upgrade your current hoe"));
+        player.sendMessage(MessageUtils.colorize("&e/df hoe shop &7- Open hoe shop"));
+        
+        if (player.hasPermission("harvestmoonmc.admin.hoe")) {
+            player.sendMessage(MessageUtils.colorize("&e/df hoe get <id> &7- Get a custom hoe"));
+            player.sendMessage(MessageUtils.colorize("&e/df hoe list &7- List all custom hoes"));
+            player.sendMessage(MessageUtils.colorize("&e/df hoe reload &7- Reload hoes configuration"));
+        }
+        
+        player.sendMessage(MessageUtils.colorize("&7Tip: Shift + Right-click with a hoe to open upgrade GUI"));
+    }
+
     private void sendHelpMessage(Player player) {
-        player.sendMessage(MessageUtils.colorize("&6==== HarvestMoonMC Help ===="));
-        player.sendMessage(MessageUtils.colorize("&e/hmc wand &7- Get a region selection wand"));
-        player.sendMessage(MessageUtils.colorize("&e/hmc create <name> &7- Create a farming region"));
-        player.sendMessage(MessageUtils.colorize("&e/hmc list &7- List all farming regions"));
-        player.sendMessage(MessageUtils.colorize("&e/hmc info <name> &7- View region details"));
-        player.sendMessage(MessageUtils.colorize("&e/hmc delete <name> &7- Delete a farming region"));
-        player.sendMessage(MessageUtils.colorize("&e/hmc sell <hand|all> &7- Sell crops for money"));
-        player.sendMessage(MessageUtils.colorize("&e/hmc shop &7- Open the shop GUI"));
-        player.sendMessage(MessageUtils.colorize("&e/hmc help &7- Show this help message"));
-        player.sendMessage(MessageUtils.colorize("&e/hmc stats &7- View your farming skills and level"));
-        player.sendMessage(MessageUtils.colorize("&e/hmc event &7- Cek status event penjualan spesial"));
+        player.sendMessage(MessageUtils.colorize("&6==== DragFarm Help ===="));
+        player.sendMessage(MessageUtils.colorize("&7/df shop &f- Buka toko penjualan hasil panen"));
+        player.sendMessage(MessageUtils.colorize("&7/df sell hand &f- Jual item di tangan"));
+        player.sendMessage(MessageUtils.colorize("&7/df sell all &f- Jual semua hasil panen di inventory"));
+        player.sendMessage(MessageUtils.colorize("&7/df stats &f- Lihat statistik farming Anda"));
+        player.sendMessage(MessageUtils.colorize("&7/df event &f- Cek status event penjualan spesial"));
+        player.sendMessage(MessageUtils.colorize("&7/df hoe &f- Informasi tentang custom hoe"));
+        player.sendMessage(MessageUtils.colorize("&7/hoeshop &f- Buka toko cangkul"));
+        
+        if (player.hasPermission("dragfarm.admin")) {
+            player.sendMessage(MessageUtils.colorize("&6==== Admin Commands ===="));
+            player.sendMessage(MessageUtils.colorize("&7/df wand &f- Dapatkan region selector wand"));
+            player.sendMessage(MessageUtils.colorize("&7/df create <name> &f- Buat region pertanian baru"));
+            player.sendMessage(MessageUtils.colorize("&7/df list &f- Tampilkan semua region pertanian"));
+            player.sendMessage(MessageUtils.colorize("&7/df info <name> &f- Lihat info region pertanian"));
+            player.sendMessage(MessageUtils.colorize("&7/df delete <name> &f- Hapus region pertanian"));
+            player.sendMessage(MessageUtils.colorize("&7/df reload &f- Reload plugin config"));
+            player.sendMessage(MessageUtils.colorize("&7/df event start <multiplier> <minutes> &f- Mulai event"));
+            player.sendMessage(MessageUtils.colorize("&7/df event stop &f- Akhiri event"));
+            player.sendMessage(MessageUtils.colorize("&7/df hoe get <id> &f- Dapatkan custom hoe"));
+        }
     }
 }
