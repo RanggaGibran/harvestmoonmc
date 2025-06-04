@@ -105,7 +105,7 @@ messages:
 farming:
   animation_delay_ticks: 10
   enable_animations: true
-  zonk_chance_percent: 5.0
+  zonk_chance_percent: 15.0
   # Default Special Ability Settings (can be overridden per hoe in hoes.yml)
   default_special_ability:
     particle_type: "SMOKE_NORMAL" # Bukkit Particle enum name for grey particles

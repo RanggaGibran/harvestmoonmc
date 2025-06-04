@@ -7,10 +7,39 @@ public class PlayerSkill {
     private int xp;
     private int level;
     private int totalHarvests;
-    
-    // XP needed for each level
+      // XP needed for each level (increased for slower leveling)
     private static final int[] XP_REQUIREMENTS = {
-        0,        150,        375,        750,        1500,        3000,        5250,        8250,        12000,        16500,        21750,        27750,        34500,        42000,        50250,        59250,        69000,        79500,        90750,        102750,        115500,        129000,        143250,        158250,        174000,        190500,        207750,        225750,        244500,        264000    };
+        0,      // Level 1 (starting level)
+        200,    // Level 2 (was 100)
+        500,    // Level 3 (was 250)
+        1000,   // Level 4 (was 500)
+        2000,   // Level 5 (was 1000)
+        4000,   // Level 6 (was 2000)
+        7000,   // Level 7 (was 3500)
+        11000,  // Level 8 (was 5500)
+        16000,  // Level 9 (was 8000)
+        22000,  // Level 10 (was 11000)
+        29000,  // Level 11 (was 14500)
+        37000,  // Level 12 (was 18500)
+        46000,  // Level 13 (was 23000)
+        56000,  // Level 14 (was 28000)
+        67000,  // Level 15 (was 33500)
+        79000,  // Level 16 (was 39500)
+        92000,  // Level 17 (was 46000)
+        106000, // Level 18 (was 53000)
+        121000, // Level 19 (was 60500)
+        137000, // Level 20 (was 68500)
+        154000, // Level 21 (was 77000)
+        172000, // Level 22 (was 86000)
+        191000, // Level 23 (was 95500)
+        211000, // Level 24 (was 105500)
+        232000, // Level 25 (was 116000)
+        254000, // Level 26 (was 127000)
+        277000, // Level 27 (was 138500)
+        301000, // Level 28 (was 150500)
+        326000, // Level 29 (was 163000)
+        352000, // Level 30 (was 176000)
+    };
     
     private static final int MAX_LEVEL = 30;
     

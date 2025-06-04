@@ -234,12 +234,9 @@ public class FarmingListener implements Listener {
                         player.getInventory().setItemInMainHand(updatedHoe);
                     }
                 }
-                
-                customCropItem.setAmount(dropAmount);
-                HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(customCropItem);
-                for (ItemStack item : leftover.values()) {
-                    player.getWorld().dropItemNaturally(player.getLocation(), item);
-                }
+                  customCropItem.setAmount(dropAmount);
+                // Drop items naturally on ground instead of adding to inventory
+                block.getWorld().dropItemNaturally(block.getLocation(), customCropItem);
                 
                 plugin.getHarvestLimitManager().incrementHarvestCount(player, dropAmount);
                 double xpMultiplier = QualityUtils.getXpMultiplier(qualityTier);
@@ -277,12 +274,9 @@ public class FarmingListener implements Listener {
                                 int areaDropAmount = calculateDropAmount(heldItem, areaOriginalCropType);
                                 if (customHoe != null) { // Perlu cek lagi karena bisa jadi hoe utama pecah
                                      areaDropAmount *= customHoe.getHarvestMultiplier();
-                                }
-                                areaCropItem.setAmount(areaDropAmount);
-                                HashMap<Integer, ItemStack> areaLeftover = player.getInventory().addItem(areaCropItem);
-                                for (ItemStack item : areaLeftover.values()) {
-                                    player.getWorld().dropItemNaturally(player.getLocation(), item);
-                                }
+                                }                                areaCropItem.setAmount(areaDropAmount);
+                                // Drop AoE items naturally on ground instead of adding to inventory
+                                areaBlock.getWorld().dropItemNaturally(areaBlock.getLocation(), areaCropItem);
                                 plugin.getHarvestLimitManager().incrementHarvestCount(player, areaDropAmount);
                                 double areaXpMultiplier = QualityUtils.getXpMultiplier((String) areaQualityInfo.get("tier"));
                                 int areaXpGained = (int) Math.round(plugin.getSkillManager().getBaseXp(areaOriginalCropType) * areaXpMultiplier);
