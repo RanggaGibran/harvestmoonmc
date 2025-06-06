@@ -73,7 +73,7 @@ grinding_system:
 
 # Messages
 messages:
-  prefix: "&6[DragFarm] &r"
+  prefix: "&x&F&F&B&A&0&0&lD&x&F&F&C&A&0&0&lr&x&F&F&D&9&0&0&la&x&F&F&E&9&0&0&lg&x&F&F&F&8&0&0&lF&x&F&F&F&8&0&0&la&x&F&F&F&8&0&0&lr&x&F&F&F&8&0&0&lm &8» &r&f"
   wand_given: "Farm Region Selection Wand diberikan."
   pos1_selected: "Posisi 1 dipilih: %x%, %y%, %z%"
   pos2_selected: "Posisi 2 dipilih: %x%, %y%, %z%"
