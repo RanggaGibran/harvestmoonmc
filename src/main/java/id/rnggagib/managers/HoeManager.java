@@ -457,9 +457,11 @@ public class HoeManager {
              player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + plugin.getConfig().getString("messages.special_ability_no_permission")));
             return;
         }
+          FarmingRegion currentRegion = plugin.getRegionManager().getRegionAt(player.getLocation());
+        boolean isInFarmArea = currentRegion != null || 
+                              player.getLocation().getBlock().getRelative(0, -1, 0).getType() == org.bukkit.Material.FARMLAND;
         
-        FarmingRegion currentRegion = plugin.getRegionManager().getRegionAt(player.getLocation());
-        if (currentRegion == null) {
+        if (!isInFarmArea) {
             player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") +
                     plugin.getConfig().getString("messages.custom_hoe_outside_farm_region"))); // Use the more general message
             return;

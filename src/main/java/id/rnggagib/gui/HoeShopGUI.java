@@ -30,8 +30,7 @@ public class HoeShopGUI implements Listener {
         this.plugin = plugin;
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
-    
-    public void openBuyShop(Player player) {
+      public void openBuyShop(Player player) {
         String buyShopTitle = plugin.getConfig().getString("customization.gui.hoe_shop_main_title", DEFAULT_HOE_BUY_SHOP_TITLE);
         Inventory shopInventory = Bukkit.createInventory(null, SHOP_SIZE, buyShopTitle);
         ItemStack divider = createGuiItem(Material.GRAY_STAINED_GLASS_PANE, " ");
@@ -44,13 +43,12 @@ public class HoeShopGUI implements Listener {
         // Baris 2: Item-item utama
         shopInventory.setItem(9, divider);
         shopInventory.setItem(10, divider);
-        ItemStack basicHoe = createHoeShopItem("basic_hoe");
+        ItemStack basicHoe = createHoeShopItem("basic_hoe", player);
         if (basicHoe != null) shopInventory.setItem(11, basicHoe); 
         shopInventory.setItem(12, divider);
         shopInventory.setItem(13, divider); 
-        ItemStack upgradeButton = createGuiItem(Material.ANVIL, "§b§lUpgrade Hoe", 
-                Arrays.asList("§7Klik untuk membuka menu upgrade", "§7(Pegang cangkul kustom Anda)"));
-        shopInventory.setItem(15, upgradeButton); 
+        // Removed upgrade button
+        shopInventory.setItem(15, divider); 
         shopInventory.setItem(16, divider);
         shopInventory.setItem(17, divider);
 
@@ -174,21 +172,42 @@ public class HoeShopGUI implements Listener {
         }
         return item;
     }
-    
-    /**
+      /**
      * Membuat item hoe untuk ditampilkan di shop
      */
-    private ItemStack createHoeShopItem(String hoeId) {
+    private ItemStack createHoeShopItem(String hoeId, Player player) {
         ItemStack hoeItem = plugin.getHoeManager().createHoe(hoeId);
         CustomHoe hoe = plugin.getHoeManager().getHoeById(hoeId);
         
         if (hoeItem != null && hoe != null) {
             ItemMeta meta = hoeItem.getItemMeta();
             if (meta != null) {
-                List<String> lore = meta.getLore() != null ? meta.getLore() : new ArrayList<>();
+                List<String> lore = meta.getLore() != null ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
                 lore.add("");
-                lore.add("§a§lHarga: §a" + plugin.getEconomyManager().format(5000)); // Harga dasar untuk basic_hoe
-                lore.add("§7Klik untuk membeli");
+                
+                // Check if player already has this hoe
+                boolean playerHasHoe = false;
+                for (ItemStack item : player.getInventory().getContents()) {
+                    if (item != null) {
+                        CustomHoe playerHoe = plugin.getHoeManager().getHoeFromItemStack(item);
+                        if (playerHoe != null && playerHoe.getId().equals(hoeId)) {
+                            playerHasHoe = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (playerHasHoe) {
+                    // Player already has this hoe
+                    lore.add("§c§lAnda sudah memiliki cangkul ini");
+                    // Change the item appearance to show it's unavailable
+                    hoeItem.setType(Material.GRAY_DYE);
+                } else {
+                    // Player doesn't have this hoe yet
+                    lore.add("§a§lHarga: §a" + plugin.getEconomyManager().format(5000)); // Harga dasar untuk basic_hoe
+                    lore.add("§7Klik untuk membeli");
+                }
+                
                 meta.setLore(lore);
                 hoeItem.setItemMeta(meta);
             }
@@ -234,24 +253,14 @@ public class HoeShopGUI implements Listener {
         
         String viewTitle = event.getView().getTitle();
         String buyShopTitle = plugin.getConfig().getString("customization.gui.hoe_shop_main_title", DEFAULT_HOE_BUY_SHOP_TITLE);
-        String upgradeShopTitle = plugin.getConfig().getString("customization.gui.upgrade_title", DEFAULT_UPGRADE_TITLE);
-
-        if (viewTitle.equals(buyShopTitle)) { 
-            if (slot == 11 && clickedItem.getType() != Material.GRAY_STAINED_GLASS_PANE) { 
-                buyBasicHoe(player);
-            } else if (slot == 15 && clickedItem.getType() == Material.ANVIL) { 
-                ItemStack heldItem = player.getInventory().getItemInMainHand();
-                CustomHoe currentHoe = plugin.getHoeManager().getHoeFromItemStack(heldItem);
-                if (currentHoe != null) {
-                    if (currentHoe.getNextTier() != null) {
-                        openUpgradeShop(player, heldItem);
-                    } else {
-                        player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix", "&6[DragFarm] &r") +
-                                "&cTidak ada upgrade yang tersedia untuk hoe ini!"));
-                    }
-                } else {
+        String upgradeShopTitle = plugin.getConfig().getString("customization.gui.upgrade_title", DEFAULT_UPGRADE_TITLE);        if (viewTitle.equals(buyShopTitle)) { 
+            if (slot == 11) { 
+                if (clickedItem.getType() != Material.GRAY_STAINED_GLASS_PANE && clickedItem.getType() != Material.GRAY_DYE) {
+                    buyBasicHoe(player);
+                } else if (clickedItem.getType() == Material.GRAY_DYE) {
+                    // Player already has this hoe
                     player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix", "&6[DragFarm] &r") +
-                            "&cAnda harus memegang custom farming hoe untuk meng-upgrade!"));
+                            "&cAnda sudah memiliki cangkul ini!"));
                 }
             } else if (slot == 31 && clickedItem.getType() == Material.BARRIER) { 
                 player.closeInventory();
