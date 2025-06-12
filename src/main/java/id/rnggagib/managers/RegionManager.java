@@ -178,11 +178,23 @@ public class RegionManager {
     public boolean regionExists(String name) {
         return regions.containsKey(name);
     }
-    
-    /**
+      /**
      * Gets the region at a specific location
      */
     public FarmingRegion getRegionAt(Location location) {
+        // If there are no regions defined, treat farmland areas as valid farming regions
+        if (regions.isEmpty()) {
+            // Check if the player is standing on farmland
+            if (location.getBlock().getRelative(0, -1, 0).getType() == org.bukkit.Material.FARMLAND) {
+                // Create a temporary region for this check
+                FarmingRegion farmlandRegion = new FarmingRegion("_temp_farmland", 
+                    location.clone().add(-10, -5, -10), 
+                    location.clone().add(10, 5, 10));
+                return farmlandRegion;
+            }
+        }
+        
+        // Check all defined regions
         for (FarmingRegion region : regions.values()) {
             if (region.contains(location)) {
                 return region;

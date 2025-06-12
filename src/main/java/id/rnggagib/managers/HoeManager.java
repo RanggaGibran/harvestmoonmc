@@ -633,13 +633,11 @@ public class HoeManager {
 
                     if (cropBlock != null && cropBlock.getBlockData() instanceof Ageable) {
                         Ageable ageable = (Ageable) cropBlock.getBlockData();
-                        if (ageable.getAge() == ageable.getMaximumAge()) {
-                            // Check region again for the specific cropBlock
+                        if (ageable.getAge() == ageable.getMaximumAge()) {                            // Check region again for the specific cropBlock
                             FarmingRegion cropRegion = plugin.getRegionManager().getRegionAt(cropBlock.getLocation());
                             if (cropRegion == null) continue; // Skip if this specific crop is not in a farming region
-
-                            if (plugin.getHarvestLimitManager().canHarvest(player)) {
-                                Material originalCropType = cropBlock.getType();
+                            // Harvest limit check removed - unlimited harvesting
+                            Material originalCropType = cropBlock.getType();
 
                                 // Simplified harvest logic (no Zonk for ability for now)
                                 Map<String, Object> qualityInfo = QualityUtils.calculateQuality(plugin, originalCropType, hoeItem, player);
@@ -679,4 +677,3 @@ public class HoeManager {
             }
         }
     }
-}

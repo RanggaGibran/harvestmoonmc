@@ -29,16 +29,19 @@ public class HoeInteractListener implements Listener {
 
             CustomHoe hoe = plugin.getHoeManager().getHoeFromItemStack(item);
             if (hoe != null) {
-                FarmingRegion currentRegion = plugin.getRegionManager().getRegionAt(player.getLocation());
-
-                // Prioritize Special Ability
+                FarmingRegion currentRegion = plugin.getRegionManager().getRegionAt(player.getLocation());                // Prioritize Special Ability
                 if (hoe.isSpecialAbilityEnabled() && hoe.getSpecialAbilityRadius() > 0) {
-                    if (currentRegion == null) {
+                    // Check if player is in a region or standing near farmland
+                    boolean isInFarmArea = currentRegion != null || 
+                                          player.getLocation().getBlock().getRelative(0, -1, 0).getType() == org.bukkit.Material.FARMLAND;
+                    
+                    if (!isInFarmArea) {
                         player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") +
                                 plugin.getConfig().getString("messages.custom_hoe_outside_farm_region")));
                         event.setCancelled(true);
                         return;
                     }
+                    
                     event.setCancelled(true);
                     plugin.getHoeManager().activateSpecialAbility(player, hoe, item);
                     return; 
@@ -55,11 +58,13 @@ public class HoeInteractListener implements Listener {
                     }
                     plugin.getHoeShopGUI().openUpgradeShop(player, item);
                     return; 
-                }
-                // If it's a custom hoe but no special ability and no upgrade,
+                }                // If it's a custom hoe but no special ability and no upgrade,
                 // and they are outside a farm region, send the message.
                 // If inside, let it be cancelled to prevent tilling if that's the default action.
-                if (currentRegion == null) {
+                boolean isInFarmArea = currentRegion != null || 
+                                      player.getLocation().getBlock().getRelative(0, -1, 0).getType() == org.bukkit.Material.FARMLAND;
+                
+                if (!isInFarmArea) {
                      player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") +
                                 plugin.getConfig().getString("messages.custom_hoe_outside_farm_region")));
                 }

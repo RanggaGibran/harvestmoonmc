@@ -92,7 +92,7 @@ messages:
   config_reloaded: "&aKonfigurasi plugin berhasil di-reload!"
   need_hoe: "&cYou must use a specific farming hoe to harvest here!" # Changed for clarity
   vanilla_hoe_in_farm_region: "&cYou can only use custom farming hoes in this region."
-  custom_hoe_outside_farm_region: "&cHoe can only be used at /warp farm."
+  custom_hoe_outside_farm_region: "&cCustom farming tools can only be used in farming areas."
   zonk_harvest: "&c&lZONK! &r&cKamu tidak mendapatkan apa-apa dari panen ini."
   special_ability_activated: "&aSpecial ability &e'Divine Harvest'&a activated!"
   special_ability_cooldown: "&cAbility on cooldown! Time remaining: &e%time% seconds&c."

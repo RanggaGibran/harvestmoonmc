@@ -1,21 +1,15 @@
 package id.rnggagib.managers;
 
 import id.rnggagib.HarvestMoonMC;
-import id.rnggagib.utils.MessageUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
 
 public class HarvestLimitManager {
     private final HarvestMoonMC plugin;
     private final Random random = new Random();
-    private final Map<UUID, Integer> playerHarvestCounts = new HashMap<>();
-    private final Map<UUID, Integer> playerHarvestLimits = new HashMap<>();
+    // Maps for tracking harvests removed - unlimited harvesting
     private BukkitTask resetTask;
     
     // Default values
@@ -39,128 +33,60 @@ public class HarvestLimitManager {
         minResetTimeMinutes = plugin.getConfig().getInt("harvest.min_reset_time_minutes", 60);
         maxResetTimeMinutes = plugin.getConfig().getInt("harvest.max_reset_time_minutes", 180);
     }
-    
-    /**
+      /**
      * Schedules the next harvest limit reset for all players
+     * Now just a placeholder since limits are removed
      */
     private void scheduleNextReset() {
+        // No need to schedule limit resets as harvesting is now unlimited
         if (resetTask != null) {
             resetTask.cancel();
+            resetTask = null;
         }
-        
-        int resetTimeMinutes = minResetTimeMinutes + random.nextInt(maxResetTimeMinutes - minResetTimeMinutes + 1);
-        long resetTimeTicks = resetTimeMinutes * 60L * 20L; // Convert to ticks
-        
-        plugin.getLogger().info("Next harvest limit reset scheduled in " + resetTimeMinutes + " minutes");
-        
-        resetTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            resetAllHarvestLimits();
-            scheduleNextReset();
-        }, resetTimeTicks);
+        plugin.getLogger().info("Harvest limits have been disabled - unlimited harvesting enabled");
     }
     
     /**
      * Resets harvest limits for all players
-     */
-    public void resetAllHarvestLimits() {
-        playerHarvestCounts.clear();
-        playerHarvestLimits.clear();
-        
-        // Notify online players about the reset
-        String resetMessage = plugin.getConfig().getString("messages.harvest_limit_reset", 
-                "&aKuota panen Anda telah direset!");
-        
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + resetMessage));
-        }
-        
-        plugin.getLogger().info("Reset harvest limits for all players");
+     */    public void resetAllHarvestLimits() {
+        // No-op method - limits are disabled
+        plugin.getLogger().info("Harvest limits reset triggered but ignored (unlimited harvesting enabled)");
     }
-    
-    /**
+      /**
      * Checks if a player can harvest more crops
      * @param player The player
      * @return true if player is below their harvest limit
      */
     public boolean canHarvest(Player player) {
-        UUID playerId = player.getUniqueId();
-        
-        // Admins and creative mode players bypass limits
-        if (player.hasPermission("harvestmoonmc.admin.bypass") || 
-            player.getGameMode() == org.bukkit.GameMode.CREATIVE) {
-            return true;
-        }
-        
-        // Get current harvest count or initialize to 0
-        int currentCount = playerHarvestCounts.getOrDefault(playerId, 0);
-        
-        // Get harvest limit or generate a new one
-        int limit = playerHarvestLimits.computeIfAbsent(playerId, uuid -> 
-            minHarvestLimit + random.nextInt(maxHarvestLimit - minHarvestLimit + 1)
-        );
-        
-        return currentCount < limit;
+        // Always return true - unlimited harvesting
+        return true;
     }
-    
-    /**
+      /**
      * Gets the remaining harvest count for a player
      * @param player The player
      * @return Remaining harvests allowed
      */
     public int getRemainingHarvests(Player player) {
-        UUID playerId = player.getUniqueId();
-        
-        // Admins and creative mode players have unlimited harvests
-        if (player.hasPermission("harvestmoonmc.admin.bypass") || 
-            player.getGameMode() == org.bukkit.GameMode.CREATIVE) {
-            return Integer.MAX_VALUE;
-        }
-        
-        int currentCount = playerHarvestCounts.getOrDefault(playerId, 0);
-        int limit = playerHarvestLimits.computeIfAbsent(playerId, uuid -> 
-            minHarvestLimit + random.nextInt(maxHarvestLimit - minHarvestLimit + 1)
-        );
-        
-        return Math.max(0, limit - currentCount);
+        // Always return the maximum integer value for unlimited harvests
+        return Integer.MAX_VALUE;
     }
-    
-    /**
+      /**
      * Increments a player's harvest count
      * @param player The player
      * @param amount Amount to increment by
      * @return Remaining harvests allowed
-     */
-    public int incrementHarvestCount(Player player, int amount) {
-        UUID playerId = player.getUniqueId();
-        
-        // Admins and creative mode players don't consume harvest count
-        if (player.hasPermission("harvestmoonmc.admin.bypass") || 
-            player.getGameMode() == org.bukkit.GameMode.CREATIVE) {
-            return Integer.MAX_VALUE;
-        }
-        
-        int currentCount = playerHarvestCounts.getOrDefault(playerId, 0);
-        int newCount = currentCount + amount;
-        playerHarvestCounts.put(playerId, newCount);
-        
-        int limit = playerHarvestLimits.computeIfAbsent(playerId, uuid -> 
-            minHarvestLimit + random.nextInt(maxHarvestLimit - minHarvestLimit + 1)
-        );
-        
-        return Math.max(0, limit - newCount);
+     */    public int incrementHarvestCount(Player player, int amount) {
+        // Don't track harvest counts at all - fully unlimited
+        return Integer.MAX_VALUE;
     }
-    
-    /**
+      /**
      * Gets the current harvest limit for a player
      * @param player The player
      * @return The player's harvest limit
      */
     public int getHarvestLimit(Player player) {
-        UUID playerId = player.getUniqueId();
-        
-        return playerHarvestLimits.computeIfAbsent(playerId, uuid -> 
-            minHarvestLimit + random.nextInt(maxHarvestLimit - minHarvestLimit + 1)
-        );
+        // Return the maximum integer value for unlimited harvests
+        return Integer.MAX_VALUE;
     }
     
     /**

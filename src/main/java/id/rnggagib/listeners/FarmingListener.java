@@ -108,20 +108,31 @@ public class FarmingListener implements Listener {
 
         if (player.getGameMode() == GameMode.CREATIVE || player.hasPermission("dragfarm.admin.bypass")) {
             return;
-        }
-
-        ItemStack heldItemForCheck = player.getInventory().getItemInMainHand();
+        }        ItemStack heldItemForCheck = player.getInventory().getItemInMainHand();
         CustomHoe customHoeForCheck = plugin.getHoeManager().getHoeFromItemStack(heldItemForCheck);
         FarmingRegion region = plugin.getRegionManager().getRegionAt(block.getLocation());
-
-        if (customHoeForCheck != null && region == null) { // Custom hoe used OUTSIDE a farming region
-            player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") +
-                    plugin.getConfig().getString("messages.custom_hoe_outside_farm_region")));
-            event.setCancelled(true);
-            return;
-        }
-
-        if (region == null) { // Not in a farming region, and not a custom hoe (already handled above)
+        
+        // Check if the block is farmable soil (with crop above)
+        boolean isFarmableArea = (block.getType() == Material.FARMLAND) || 
+                                (block.getRelative(0, -1, 0).getType() == Material.FARMLAND) ||
+                                CropUtils.isSupportedCrop(block.getType());
+        
+        // For custom hoes, allow use in farm-like areas even without defined regions
+        if (customHoeForCheck != null) {
+            if (!isFarmableArea && region == null) { // Custom hoe used OUTSIDE a farming area
+                player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") +
+                        plugin.getConfig().getString("messages.custom_hoe_outside_farm_region")));
+                event.setCancelled(true);
+                return;
+            }
+            // If we have a custom hoe and we're in a farmable area, treat it as if we're in a region
+            if (isFarmableArea && region == null) {
+                // Continue with farming mechanics as if we're in a region
+            } else if (region == null) {
+                // Not in a region or farmable area with custom hoe
+                return;
+            }
+        } else if (region == null) { // Not in a farming region, and not a custom hoe
             return; // Allow default behavior or other plugins
         }
         
@@ -156,15 +167,8 @@ public class FarmingListener implements Listener {
                 }
                 processingBlocks.remove(block);
                 return;
-            }
-
-            if (isMature) {
-                if (!plugin.getHarvestLimitManager().canHarvest(player)) {
-                    player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + 
-                            plugin.getConfig().getString("messages.harvest_limit_reached"))); // Message for limit still exists
-                    processingBlocks.remove(block);
-                    return;
-                }
+            }            if (isMature) {
+                // Harvest limit check removed - unlimited harvesting enabled
                 
                 double zonkChancePercent = plugin.getConfig().getDouble("farming.zonk_chance_percent", 0.0);
                 boolean isZonk = random.nextDouble() * 100 < zonkChancePercent;
