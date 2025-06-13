@@ -21,7 +21,7 @@ public class HoeShopGUI implements Listener {
     private final Map<Player, Inventory> openShops = new HashMap<>();
     private final Map<Player, String> viewingHoe = new HashMap<>();
     
-    private static final int SHOP_SIZE = 36; // 4 baris
+    private static final int SHOP_SIZE = 27; // 3 baris
     // Constants for default titles if config is missing
     private static final String DEFAULT_HOE_BUY_SHOP_TITLE = "Toko Cangkul";
     private static final String DEFAULT_UPGRADE_TITLE = "Upgrade Cangkul";
@@ -29,49 +29,27 @@ public class HoeShopGUI implements Listener {
     public HoeShopGUI(HarvestMoonMC plugin) {
         this.plugin = plugin;
         Bukkit.getPluginManager().registerEvents(this, plugin);
-    }
-      public void openBuyShop(Player player) {
+    }    public void openBuyShop(Player player) {
         String buyShopTitle = plugin.getConfig().getString("customization.gui.hoe_shop_main_title", DEFAULT_HOE_BUY_SHOP_TITLE);
         Inventory shopInventory = Bukkit.createInventory(null, SHOP_SIZE, buyShopTitle);
         ItemStack divider = createGuiItem(Material.GRAY_STAINED_GLASS_PANE, " ");
 
-        // Baris 1: Pembatas
-        for (int i = 0; i < 9; i++) {
+        // Fill entire inventory with dividers first
+        for (int i = 0; i < SHOP_SIZE; i++) {
             shopInventory.setItem(i, divider);
         }
 
-        // Baris 2: Item-item utama
-        shopInventory.setItem(9, divider);
-        shopInventory.setItem(10, divider);
+        // Place basic hoe in the center (slot 13 in a 3x9 inventory)
         ItemStack basicHoe = createHoeShopItem("basic_hoe", player);
-        if (basicHoe != null) shopInventory.setItem(11, basicHoe); 
-        shopInventory.setItem(12, divider);
-        shopInventory.setItem(13, divider); 
-        // Removed upgrade button
-        shopInventory.setItem(15, divider); 
-        shopInventory.setItem(16, divider);
-        shopInventory.setItem(17, divider);
-
-        // Baris 3: Pembatas
-        for (int i = 18; i < 27; i++) {
-            shopInventory.setItem(i, divider);
-        }
+        if (basicHoe != null) shopInventory.setItem(13, basicHoe);
         
-        // Baris 4: Tombol kembali & Pembatas
-        for (int i = 27; i < 36; i++) {
-            if (i == 31) { 
-                ItemStack backButton = createGuiItem(Material.BARRIER, "§c§lKembali");
-                shopInventory.setItem(i, backButton);
-            } else {
-                shopInventory.setItem(i, divider);
-            }
-        }
-        
+        // Place back button at the bottom row in the center
+        ItemStack backButton = createGuiItem(Material.BARRIER, "§c§lKembali");
+        shopInventory.setItem(22, backButton);        
         openShops.put(player, shopInventory);
         player.openInventory(shopInventory);
     }
-    
-    public void openUpgradeShop(Player player, ItemStack currentHoeItem) {
+      public void openUpgradeShop(Player player, ItemStack currentHoeItem) {
         CustomHoe hoe = plugin.getHoeManager().getHoeFromItemStack(currentHoeItem);
         if (hoe == null || hoe.getNextTier() == null) {
             player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix") + "&cTidak ada upgrade yang tersedia untuk hoe ini atau hoe tidak valid!"));
@@ -84,19 +62,17 @@ public class HoeShopGUI implements Listener {
         Inventory upgradeInventory = Bukkit.createInventory(null, SHOP_SIZE, upgradeShopTitle);
         ItemStack divider = createGuiItem(Material.GRAY_STAINED_GLASS_PANE, " ");
 
-        // Baris 1: Pembatas
-        for (int i = 0; i < 9; i++) {
+        // Fill entire inventory with dividers first
+        for (int i = 0; i < SHOP_SIZE; i++) {
             upgradeInventory.setItem(i, divider);
         }
         
-        // Baris 2: Hoe saat ini -> Panah -> Hoe berikutnya
-        upgradeInventory.setItem(9, divider);
-        upgradeInventory.setItem(10, divider);
-        upgradeInventory.setItem(11, currentHoeItem); 
-        upgradeInventory.setItem(12, divider); 
+        // Top row: Current hoe -> Arrow -> Next tier hoe
+        upgradeInventory.setItem(11, currentHoeItem);
+        
         ItemStack arrow = createGuiItem(Material.ARROW, "§e§l→ Upgrade →");
-        upgradeInventory.setItem(13, arrow); 
-        upgradeInventory.setItem(14, divider);
+        upgradeInventory.setItem(13, arrow);
+        
         CustomHoe nextTierHoe = plugin.getHoeManager().getHoeById(hoe.getNextTier());
         if (nextTierHoe != null) {
             ItemStack nextTierHoeItem = plugin.getHoeManager().createHoe(nextTierHoe.getId());
@@ -123,32 +99,16 @@ public class HoeShopGUI implements Listener {
         } else {
             upgradeInventory.setItem(15, createGuiItem(Material.BARRIER, "§cError: Next tier not found"));
         }
-        upgradeInventory.setItem(16, divider);
-        upgradeInventory.setItem(17, divider);
 
-        // Baris 3: Tombol Upgrade & Pembatas
-        for (int i = 18; i < 27; i++) {
-            if (i == 22) { 
-                String upgradeButtonText = plugin.getConfig().getString("customization.gui.upgrade_button", "§a§lUpgrade Sekarang");
-                upgradeInventory.setItem(i, createGuiItem(Material.EMERALD_BLOCK, upgradeButtonText,
-                        Collections.singletonList("§7Klik untuk mengupgrade hoe Anda")));
-            } else {
-                upgradeInventory.setItem(i, divider);
-            }
-        }
+        // Bottom row: Upgrade button and Cancel button
+        String upgradeButtonText = plugin.getConfig().getString("customization.gui.upgrade_button", "§a§lUpgrade Sekarang");
+        upgradeInventory.setItem(21, createGuiItem(Material.EMERALD_BLOCK, upgradeButtonText,
+                Collections.singletonList("§7Klik untuk mengupgrade hoe Anda")));
         
-        // Baris 4: Tombol Batal & Pembatas
-        for (int i = 27; i < 36; i++) {
-            if (i == 31) { 
-                String cancelButtonText = plugin.getConfig().getString("customization.gui.cancel_button", "§c§lBatal");
-                upgradeInventory.setItem(i, createGuiItem(Material.BARRIER, cancelButtonText, 
-                        Collections.singletonList("§7Klik untuk kembali")));
-            } else {
-                upgradeInventory.setItem(i, divider);
-            }
-        }
-        
-        openShops.put(player, upgradeInventory);
+        String cancelButtonText = plugin.getConfig().getString("customization.gui.cancel_button", "§c§lBatal");
+        upgradeInventory.setItem(23, createGuiItem(Material.BARRIER, cancelButtonText, 
+                Collections.singletonList("§7Klik untuk kembali")));
+          openShops.put(player, upgradeInventory);
         player.openInventory(upgradeInventory);
     }
     
@@ -254,7 +214,7 @@ public class HoeShopGUI implements Listener {
         String viewTitle = event.getView().getTitle();
         String buyShopTitle = plugin.getConfig().getString("customization.gui.hoe_shop_main_title", DEFAULT_HOE_BUY_SHOP_TITLE);
         String upgradeShopTitle = plugin.getConfig().getString("customization.gui.upgrade_title", DEFAULT_UPGRADE_TITLE);        if (viewTitle.equals(buyShopTitle)) { 
-            if (slot == 11) { 
+            if (slot == 13) { // Center slot (was 11)
                 if (clickedItem.getType() != Material.GRAY_STAINED_GLASS_PANE && clickedItem.getType() != Material.GRAY_DYE) {
                     buyBasicHoe(player);
                 } else if (clickedItem.getType() == Material.GRAY_DYE) {
@@ -262,14 +222,14 @@ public class HoeShopGUI implements Listener {
                     player.sendMessage(MessageUtils.colorize(plugin.getConfig().getString("messages.prefix", "&6[DragFarm] &r") +
                             "&cAnda sudah memiliki cangkul ini!"));
                 }
-            } else if (slot == 31 && clickedItem.getType() == Material.BARRIER) { 
+            } else if (slot == 22 && clickedItem.getType() == Material.BARRIER) { // Back button (was 31)
                 player.closeInventory();
             }
         } 
         else if (viewTitle.equals(upgradeShopTitle)) { // Corrected comparison
-            if (slot == 22 && clickedItem.getType() == Material.EMERALD_BLOCK) { 
+            if (slot == 21 && clickedItem.getType() == Material.EMERALD_BLOCK) { // Upgrade button (was 22)
                 upgradePlayerHoe(player);
-            } else if (slot == 31 && clickedItem.getType() == Material.BARRIER) { 
+            } else if (slot == 23 && clickedItem.getType() == Material.BARRIER) { // Cancel button (was 31)
                 openBuyShop(player); 
             }
         }

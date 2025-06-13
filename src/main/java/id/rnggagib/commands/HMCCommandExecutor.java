@@ -706,6 +706,7 @@ public class HMCCommandExecutor implements CommandExecutor {
         }
         
         player.sendMessage(MessageUtils.colorize("&7Tip: Shift + Right-click with a hoe to open upgrade GUI"));
+        player.sendMessage(MessageUtils.colorize("&7Tip: Shift + Left-click with a hoe to activate special ability"));
     }
 
     private void sendHelpMessage(Player player) {
